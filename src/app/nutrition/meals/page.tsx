@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getAuthToken } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Star, Trash2, Plus, ChefHat, Zap, Dumbbell, Loader2 } from "lucide-react";
+import { Star, Trash2, Plus, ChefHat, Zap, Dumbbell, Loader2, Copy } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 export default function MealsPage() {
@@ -22,6 +22,7 @@ export default function MealsPage() {
   const ingredients = useQuery(api.ingredients.list, token ? { token } : "skip");
   const removeMeal = useMutation(api.meals.remove);
   const toggleFavorite = useMutation(api.meals.update);
+  const duplicateMeal = useMutation(api.meals.duplicate);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -129,12 +130,22 @@ export default function MealsPage() {
                     <span className="text-xs text-muted-foreground">
                       {meal.components.length} ingredients
                     </span>
-                    <button
-                      onClick={() => token && removeMeal({ token, mealId: meal._id })}
-                      className="p-1.5 rounded text-muted-foreground/30 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button
+                        onClick={() => token && duplicateMeal({ token, mealId: meal._id })}
+                        className="p-1.5 rounded text-muted-foreground/30 hover:text-foreground transition-colors"
+                        title="Duplicate"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => token && removeMeal({ token, mealId: meal._id })}
+                        className="p-1.5 rounded text-muted-foreground/30 hover:text-destructive transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -8,11 +8,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { getAuthToken } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+import {
+  Search,
+  Plus,
+  Trash2,
+  Loader2,
+  Package,
+  Sparkles,
+  X,
+  ChevronDown,
+} from "lucide-react";
 
 const CATEGORIES = ["protein", "fat", "vegetable", "condiment", "spice", "other"];
-const MEDICAL_TAGS = ["renal_safe", "high_potassium", "high_sodium", "low_purine"];
-const PREP_METHODS = ["raw", "pan_fry", "roast", "grill", "boil", "steam", "bake"];
 
 interface USDAFood {
   fdcId: number;
@@ -34,23 +44,31 @@ export default function IngredientsPage() {
   const token = getAuthToken();
 
   const ingredients = useQuery(api.ingredients.list, token ? { token } : "skip");
-  const categories = useQuery(api.ingredients.getCategories, token ? { token } : "skip");
   const createIngredient = useMutation(api.ingredients.create);
   const importFromUSDA = useMutation(api.ingredients.importFromUSDA);
   const removeIngredient = useMutation(api.ingredients.remove);
   const searchUSDA = useAction(api.usda.searchFoods);
   const seedKetoStaples = useMutation(api.seedIngredients.seedKetoStaples);
 
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUSDAModal, setShowUSDAModal] = useState(false);
+  
+  // Seeding
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<{ imported: number; skipped: number } | null>(null);
+
+  // USDA Search
   const [usdaQuery, setUsdaQuery] = useState("");
   const [usdaResults, setUsdaResults] = useState<USDAFood[]>([]);
   const [usdaLoading, setUsdaLoading] = useState(false);
   const [selectedUSDA, setSelectedUSDA] = useState<USDAFood | null>(null);
 
-  // Form state for manual add
+  // Manual Add Form
   const [name, setName] = useState("");
   const [category, setCategory] = useState("protein");
   const [caloriesPer100g, setCaloriesPer100g] = useState(0);
@@ -61,8 +79,6 @@ export default function IngredientsPage() {
   const [sodiumPer100g, setSodiumPer100g] = useState(0);
   const [potassiumPer100g, setPotassiumPer100g] = useState(0);
   const [isPantryEssential, setIsPantryEssential] = useState(false);
-  const [medicalTags, setMedicalTags] = useState<string[]>([]);
-  const [preparationMethods, setPreparationMethods] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -70,6 +86,26 @@ export default function IngredientsPage() {
       router.push("/login");
     }
   }, [isAuthenticated, authLoading, router]);
+
+  // Filtered ingredients
+  const filteredIngredients = useMemo(() => {
+    if (!ingredients) return [];
+    return ingredients.filter((ing) => {
+      const matchesSearch = searchQuery === "" || 
+        ing.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !categoryFilter || ing.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [ingredients, searchQuery, categoryFilter]);
+
+  // Category counts
+  const categoryCounts = useMemo(() => {
+    if (!ingredients) return {};
+    return ingredients.reduce((acc, ing) => {
+      acc[ing.category] = (acc[ing.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [ingredients]);
 
   const handleSeedStaples = async () => {
     if (!token) return;
@@ -115,8 +151,8 @@ export default function IngredientsPage() {
         potassiumPer100g: selectedUSDA.potassiumPer100g,
         category,
         isPantryEssential,
-        medicalTags,
-        preparationMethods,
+        medicalTags: [],
+        preparationMethods: [],
       });
       setShowUSDAModal(false);
       setSelectedUSDA(null);
@@ -145,8 +181,8 @@ export default function IngredientsPage() {
         potassiumPer100g,
         category,
         isPantryEssential,
-        medicalTags,
-        preparationMethods,
+        medicalTags: [],
+        preparationMethods: [],
         isCooked: false,
       });
       setShowAddModal(false);
@@ -169,123 +205,181 @@ export default function IngredientsPage() {
     setSodiumPer100g(0);
     setPotassiumPer100g(0);
     setIsPantryEssential(false);
-    setMedicalTags([]);
-    setPreparationMethods([]);
   };
 
-  if (authLoading) {
+  if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (!isAuthenticated) return null;
-
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">
-        <div className="max-w-4xl">
-          <div className="flex items-center justify-between mb-8">
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Ingredients Database</h1>
-              <p className="text-muted-foreground">
-                {ingredients?.length ?? 0} ingredients •{" "}
-                {categories?.map((c) => `${c.count} ${c.name}`).join(", ") || "No categories"}
-              </p>
+              <h1 className="text-xl font-semibold">Ingredients</h1>
+              <p className="text-sm text-muted-foreground">{ingredients?.length ?? 0} ingredients</p>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="ghost" 
-                onClick={handleSeedStaples} 
-                loading={seeding}
-                disabled={seeding}
-              >
-                🥩 Seed Keto Staples
+              {(!ingredients || ingredients.length < 20) && (
+                <Button variant="outline" onClick={handleSeedStaples} loading={seeding}>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Seed Staples
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setShowUSDAModal(true)}>
+                <Search className="h-4 w-4 mr-2" />
+                USDA Search
               </Button>
-              <Button variant="secondary" onClick={() => setShowUSDAModal(true)}>
-                🔍 Search USDA
+              <Button onClick={() => setShowAddModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Manual
               </Button>
-              <Button onClick={() => setShowAddModal(true)}>+ Add Manual</Button>
             </div>
           </div>
 
           {/* Seed Result */}
           {seedResult && (
-            <div className="mb-4 bg-green-900/20 border border-green-700 rounded-lg p-3 text-green-400 text-sm">
-              ✓ Imported {seedResult.imported} keto staples
+            <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+              ✓ Added {seedResult.imported} ingredients
               {seedResult.skipped > 0 && ` (${seedResult.skipped} already existed)`}
             </div>
           )}
 
-          {/* Ingredients List */}
-          <div className="bg-card rounded-xl overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Category</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Cal</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">P</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">F</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">C</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ingredients?.map((ing) => (
-                  <tr key={ing._id} className="border-b border-border/50 hover:bg-zinc-800/30">
-                    <td className="px-4 py-3">
-                      <div>
-                        <span className="text-foreground">{ing.name}</span>
-                        {ing.isPantryEssential && (
-                          <span className="ml-2 text-xs bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded">
-                            pantry
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground capitalize">{ing.category}</td>
-                    <td className="px-4 py-3 text-sm text-zinc-300 text-right">{Math.round(ing.caloriesPer100g)}</td>
-                    <td className="px-4 py-3 text-sm text-blue-400 text-right">{Math.round(ing.proteinPer100g)}g</td>
-                    <td className="px-4 py-3 text-sm text-yellow-400 text-right">{Math.round(ing.fatPer100g)}g</td>
-                    <td className="px-4 py-3 text-sm text-green-400 text-right">{Math.round(ing.carbsPer100g)}g</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => token && removeIngredient({ token, ingredientId: ing._id })}
-                        className="text-red-400 hover:text-red-300 text-sm"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {(!ingredients || ingredients.length === 0) && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
-                      No ingredients yet. Search USDA or add manually to get started.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          {/* Search & Filter Bar */}
+          <div className="flex gap-3 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search ingredients..."
+                className="pl-9"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant={categoryFilter === null ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setCategoryFilter(null)}
+              >
+                All
+              </Button>
+              {CATEGORIES.map((cat) => (
+                <Button
+                  key={cat}
+                  variant={categoryFilter === cat ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setCategoryFilter(cat)}
+                  className="capitalize"
+                >
+                  {cat}
+                  {categoryCounts[cat] && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      {categoryCounts[cat]}
+                    </span>
+                  )}
+                </Button>
+              ))}
+            </div>
           </div>
+
+          {/* Ingredients List */}
+          {filteredIngredients.length > 0 ? (
+            <div className="border border-border/50 rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border/50 bg-card/50">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Category</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Cal</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">P</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">F</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">C</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredIngredients.map((ing, idx) => (
+                    <tr
+                      key={ing._id}
+                      className={cn(
+                        "border-b border-border/30 hover:bg-card/50 transition-colors",
+                        idx === filteredIngredients.length - 1 && "border-0"
+                      )}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{ing.name}</span>
+                          {ing.isPantryEssential && (
+                            <Badge variant="outline" className="text-[10px]">pantry</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground capitalize">{ing.category}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{Math.round(ing.caloriesPer100g)}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums text-violet-400">{Math.round(ing.proteinPer100g)}g</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums text-sky-400">{Math.round(ing.fatPer100g)}g</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums text-teal-400">{Math.round(ing.carbsPer100g)}g</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => token && removeIngredient({ token, ingredientId: ing._id })}
+                          className="p-1.5 rounded text-muted-foreground/30 hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : ingredients && ingredients.length > 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Search className="h-8 w-8 mx-auto mb-3 opacity-30" />
+              <p>No ingredients match your search</p>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-muted-foreground mb-4">No ingredients yet</p>
+              <Button onClick={handleSeedStaples} loading={seeding}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Seed Keto Staples
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* USDA Search Modal */}
         {showUSDAModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-card rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-              <div className="p-6 border-b border-border">
-                <h2 className="text-lg font-semibold text-foreground">Search USDA Database</h2>
+            <div className="bg-card rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden border border-border">
+              <div className="p-5 border-b border-border">
+                <h2 className="text-lg font-semibold">Search USDA Database</h2>
                 <div className="flex gap-2 mt-4">
                   <Input
                     value={usdaQuery}
                     onChange={(e) => setUsdaQuery(e.target.value)}
                     placeholder="Search foods..."
                     onKeyDown={(e) => e.key === "Enter" && handleUSDASearch()}
+                    className="flex-1"
                   />
                   <Button onClick={handleUSDASearch} loading={usdaLoading}>
                     Search
@@ -298,24 +392,21 @@ export default function IngredientsPage() {
                   <div
                     key={food.fdcId}
                     onClick={() => setSelectedUSDA(food)}
-                    className={`p-4 border-b border-border/50 cursor-pointer hover:bg-zinc-800/50 ${
-                      selectedUSDA?.fdcId === food.fdcId ? "bg-green-900/20 border-l-2 border-l-green-500" : ""
-                    }`}
-                  >
-                    <div className="text-foreground font-medium">{food.name}</div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {Math.round(food.caloriesPer100g)} cal • {Math.round(food.proteinPer100g)}g P •{" "}
-                      {Math.round(food.fatPer100g)}g F • {Math.round(food.carbsPer100g)}g C
-                    </div>
-                    {food.brandOwner && (
-                      <div className="text-xs text-zinc-500 mt-1">{food.brandOwner}</div>
+                    className={cn(
+                      "p-4 border-b border-border/50 cursor-pointer hover:bg-secondary/50 transition-colors",
+                      selectedUSDA?.fdcId === food.fdcId && "bg-primary/5 border-l-2 border-l-primary"
                     )}
+                  >
+                    <div className="font-medium">{food.name}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {Math.round(food.caloriesPer100g)} cal · {Math.round(food.proteinPer100g)}g P · {Math.round(food.fatPer100g)}g F · {Math.round(food.carbsPer100g)}g C
+                    </div>
                   </div>
                 ))}
               </div>
 
               {selectedUSDA && (
-                <div className="p-6 border-t border-border space-y-4">
+                <div className="p-5 border-t border-border space-y-4">
                   <div className="text-sm text-muted-foreground">Configure before importing:</div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -323,12 +414,10 @@ export default function IngredientsPage() {
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-foreground"
+                        className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm"
                       >
                         {CATEGORIES.map((c) => (
-                          <option key={c} value={c}>
-                            {c.charAt(0).toUpperCase() + c.slice(1)}
-                          </option>
+                          <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                         ))}
                       </select>
                     </div>
@@ -345,10 +434,8 @@ export default function IngredientsPage() {
                 </div>
               )}
 
-              <div className="p-6 border-t border-border flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setShowUSDAModal(false)}>
-                  Cancel
-                </Button>
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowUSDAModal(false)}>Cancel</Button>
                 <Button onClick={handleImportUSDA} disabled={!selectedUSDA} loading={saving}>
                   Import Selected
                 </Button>
@@ -360,12 +447,12 @@ export default function IngredientsPage() {
         {/* Manual Add Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-card rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
-              <div className="p-6 border-b border-border">
-                <h2 className="text-lg font-semibold text-foreground">Add Ingredient Manually</h2>
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto border border-border">
+              <div className="p-5 border-b border-border">
+                <h2 className="text-lg font-semibold">Add Ingredient</h2>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-5 space-y-4">
                 <Input
                   label="Name"
                   value={name}
@@ -378,60 +465,22 @@ export default function IngredientsPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-foreground"
+                    className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm"
                   >
                     {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c.charAt(0).toUpperCase() + c.slice(1)}
-                      </option>
+                      <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="text-sm font-medium text-muted-foreground pt-2">Nutrition per 100g (raw)</div>
+                <div className="text-sm font-medium text-muted-foreground pt-2">Nutrition per 100g</div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label="Calories"
-                    type="number"
-                    value={caloriesPer100g}
-                    onChange={(e) => setCaloriesPer100g(Number(e.target.value))}
-                  />
-                  <Input
-                    label="Protein (g)"
-                    type="number"
-                    value={proteinPer100g}
-                    onChange={(e) => setProteinPer100g(Number(e.target.value))}
-                  />
-                  <Input
-                    label="Fat (g)"
-                    type="number"
-                    value={fatPer100g}
-                    onChange={(e) => setFatPer100g(Number(e.target.value))}
-                  />
-                  <Input
-                    label="Carbs (g)"
-                    type="number"
-                    value={carbsPer100g}
-                    onChange={(e) => setCarbsPer100g(Number(e.target.value))}
-                  />
-                  <Input
-                    label="Fiber (g)"
-                    type="number"
-                    value={fiberPer100g}
-                    onChange={(e) => setFiberPer100g(Number(e.target.value))}
-                  />
-                  <Input
-                    label="Sodium (mg)"
-                    type="number"
-                    value={sodiumPer100g}
-                    onChange={(e) => setSodiumPer100g(Number(e.target.value))}
-                  />
-                  <Input
-                    label="Potassium (mg)"
-                    type="number"
-                    value={potassiumPer100g}
-                    onChange={(e) => setPotassiumPer100g(Number(e.target.value))}
-                  />
+                  <Input label="Calories" type="number" value={caloriesPer100g} onChange={(e) => setCaloriesPer100g(Number(e.target.value))} />
+                  <Input label="Protein (g)" type="number" value={proteinPer100g} onChange={(e) => setProteinPer100g(Number(e.target.value))} />
+                  <Input label="Fat (g)" type="number" value={fatPer100g} onChange={(e) => setFatPer100g(Number(e.target.value))} />
+                  <Input label="Carbs (g)" type="number" value={carbsPer100g} onChange={(e) => setCarbsPer100g(Number(e.target.value))} />
+                  <Input label="Fiber (g)" type="number" value={fiberPer100g} onChange={(e) => setFiberPer100g(Number(e.target.value))} />
+                  <Input label="Sodium (mg)" type="number" value={sodiumPer100g} onChange={(e) => setSodiumPer100g(Number(e.target.value))} />
                 </div>
 
                 <div className="flex items-center gap-2 pt-2">
@@ -441,17 +490,13 @@ export default function IngredientsPage() {
                     onChange={(e) => setIsPantryEssential(e.target.checked)}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-muted-foreground">Pantry Essential (oil, spice, etc.)</span>
+                  <span className="text-sm text-muted-foreground">Pantry Essential</span>
                 </div>
               </div>
 
-              <div className="p-6 border-t border-border flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setShowAddModal(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleManualAdd} loading={saving}>
-                  Add Ingredient
-                </Button>
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowAddModal(false)}>Cancel</Button>
+                <Button onClick={handleManualAdd} loading={saving}>Add Ingredient</Button>
               </div>
             </div>
           </div>

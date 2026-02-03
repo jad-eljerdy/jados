@@ -239,6 +239,49 @@ export const remove = mutation({
   },
 });
 
+// Duplicate a meal
+export const duplicate = mutation({
+  args: {
+    token: v.string(),
+    mealId: v.id("meals"),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .first();
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error("Invalid session");
+    }
+
+    const meal = await ctx.db.get(args.mealId);
+    if (!meal || meal.userId !== session.userId) {
+      throw new Error("Meal not found");
+    }
+
+    const now = Date.now();
+    const newMealId = await ctx.db.insert("meals", {
+      userId: session.userId,
+      name: `${meal.name} (copy)`,
+      description: meal.description,
+      components: meal.components,
+      totalCalories: meal.totalCalories,
+      totalProtein: meal.totalProtein,
+      totalFat: meal.totalFat,
+      totalCarbs: meal.totalCarbs,
+      totalFiber: meal.totalFiber,
+      totalSodium: meal.totalSodium,
+      totalPotassium: meal.totalPotassium,
+      isFavorite: false,
+      tags: meal.tags,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return newMealId;
+  },
+});
+
 // Calculate totals for arbitrary components (preview before saving)
 export const calculateTotals = query({
   args: {
