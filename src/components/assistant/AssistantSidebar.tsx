@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { getAuthToken } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ export function AssistantSidebar({
     api.assistant.getMessages,
     token && sessionId ? { token, sessionId } : "skip"
   );
-  const chat = useMutation(api.assistant.chat);
+  const chat = useAction(api.assistant.chat);
   const clearSession = useMutation(api.assistant.clearSession);
 
   // Auto-scroll to bottom on new messages
@@ -171,8 +171,8 @@ export function AssistantSidebar({
           </div>
         ))}
 
-        {/* Show loading when sending or waiting for response */}
-        {(isLoading || (messages && messages.length > 0 && messages[messages.length - 1]?.status === "pending")) && (
+        {/* Show loading when sending */}
+        {isLoading && (
           <div className="flex justify-start">
             <div className="bg-secondary rounded-lg px-3 py-2 flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

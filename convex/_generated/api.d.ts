@@ -11,7 +11,7 @@
 import type * as assistant from "../assistant.js";
 import type * as auth from "../auth.js";
 import type * as functions from "../functions.js";
-import type * as http from "../http.js";
+import type * as globalSettings from "../globalSettings.js";
 import type * as ingredients from "../ingredients.js";
 import type * as mealPlans from "../mealPlans.js";
 import type * as meals from "../meals.js";
@@ -32,7 +32,7 @@ declare const fullApi: ApiFromModules<{
   assistant: typeof assistant;
   auth: typeof auth;
   functions: typeof functions;
-  http: typeof http;
+  globalSettings: typeof globalSettings;
   ingredients: typeof ingredients;
   mealPlans: typeof mealPlans;
   meals: typeof meals;

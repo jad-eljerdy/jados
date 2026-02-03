@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { mutation, query, action, internalQuery } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 
 // Store chat messages
 export const sendMessage = mutation({
@@ -10,7 +10,6 @@ export const sendMessage = mutation({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     context: v.optional(v.any()),
-    status: v.optional(v.union(v.literal("pending"), v.literal("responded"))),
   },
   handler: async (ctx, args) => {
     const session = await ctx.db
@@ -27,7 +26,6 @@ export const sendMessage = mutation({
       role: args.role,
       content: args.content,
       context: args.context,
-      status: args.status ?? (args.role === "user" ? "pending" : "responded"),
       createdAt: Date.now(),
     });
 
@@ -82,8 +80,27 @@ export const clearSession = mutation({
   },
 });
 
-// Send a message and store it as pending for Clawdbot to respond
-export const chat = mutation({
+// Internal query to get user's API config
+export const _getApiConfig = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args): Promise<{ provider: string; apiKey: string; model: string } | null> => {
+    const settings = await ctx.db
+      .query("globalSettings")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!settings?.aiApiKey) return null;
+
+    return {
+      provider: settings.aiProvider ?? "openrouter",
+      apiKey: settings.aiApiKey,
+      model: settings.aiModel ?? "anthropic/claude-3.5-sonnet",
+    };
+  },
+});
+
+// Chat action - calls OpenRouter API
+export const chat = action({
   args: {
     token: v.string(),
     sessionId: v.string(),
@@ -122,88 +139,103 @@ export const chat = mutation({
       }))),
     }),
   },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", args.token))
-      .first();
-    if (!session || session.expiresAt < Date.now()) {
-      throw new Error("Invalid session");
-    }
+  handler: async (ctx, args): Promise<{ success: boolean; needsSetup?: boolean; error?: string }> => {
+    // Get session to find user
+    const session = await ctx.runQuery(api.auth.getSession, { token: args.token });
+    if (!session) throw new Error("Invalid session");
 
-    // Store user message as pending
-    const messageId = await ctx.db.insert("assistantMessages", {
-      userId: session.userId,
+    // Get API config
+    const apiConfig = await ctx.runQuery(internal.assistant._getApiConfig, { 
+      userId: session.userId 
+    });
+
+    // Store user message
+    await ctx.runMutation(api.assistant.sendMessage, {
+      token: args.token,
       sessionId: args.sessionId,
       role: "user",
       content: args.message,
       context: args.context,
-      status: "pending",
-      createdAt: Date.now(),
     });
 
-    return { messageId, status: "pending" };
-  },
-});
-
-// Get pending messages for Clawdbot to respond to
-export const getPendingMessages = query({
-  args: {
-    secret: v.optional(v.string()), // Simple auth for Clawdbot (optional for now)
-  },
-  handler: async (ctx, args) => {
-    // Verify secret matches if configured
-    const expectedSecret = process.env.CLAWDBOT_SECRET;
-    if (expectedSecret && args.secret !== expectedSecret) {
-      return [];
+    if (!apiConfig?.apiKey) {
+      // No API key configured - show setup message
+      await ctx.runMutation(api.assistant.sendMessage, {
+        token: args.token,
+        sessionId: args.sessionId,
+        role: "assistant",
+        content: "⚙️ I'm not configured yet! Go to **Settings** and add your OpenRouter API key to enable me.\n\nGet a key at: https://openrouter.ai/keys",
+      });
+      return { success: true, needsSetup: true };
     }
 
-    return await ctx.db
-      .query("assistantMessages")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .order("asc")
-      .take(10);
-  },
-});
+    // Get conversation history
+    const history = await ctx.runQuery(api.assistant.getMessages, {
+      token: args.token,
+      sessionId: args.sessionId,
+    });
 
-// Clawdbot responds to a pending message
-export const respondToMessage = mutation({
-  args: {
-    secret: v.optional(v.string()),
-    messageId: v.id("assistantMessages"),
-    response: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const expectedSecret = process.env.CLAWDBOT_SECRET;
-    if (expectedSecret && args.secret !== expectedSecret) {
-      throw new Error("Invalid secret");
+    // Build system prompt
+    const systemPrompt = buildSystemPrompt(args.context);
+
+    // Build messages
+    const messages = history.slice(-10).map((msg: any) => ({
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+    }));
+
+    // Call OpenRouter API
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiConfig.apiKey}`,
+        "HTTP-Referer": "https://jados.app",
+        "X-Title": "JadOS Nutrition Assistant",
+      },
+      body: JSON.stringify({
+        model: apiConfig.model,
+        max_tokens: 500,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("OpenRouter API error:", error);
+      
+      await ctx.runMutation(api.assistant.sendMessage, {
+        token: args.token,
+        sessionId: args.sessionId,
+        role: "assistant",
+        content: "Sorry, I encountered an error. Please check your API key in Settings.",
+      });
+      return { success: false, error };
     }
 
-    // Get the original message
-    const original = await ctx.db.get(args.messageId);
-    if (!original) throw new Error("Message not found");
-
-    // Mark original as responded
-    await ctx.db.patch(args.messageId, { status: "responded" });
+    const data = await response.json();
+    const assistantMessage = data.choices[0]?.message?.content ?? "I couldn't generate a response.";
 
     // Store assistant response
-    await ctx.db.insert("assistantMessages", {
-      userId: original.userId,
-      sessionId: original.sessionId,
+    await ctx.runMutation(api.assistant.sendMessage, {
+      token: args.token,
+      sessionId: args.sessionId,
       role: "assistant",
-      content: args.response,
-      status: "responded",
-      createdAt: Date.now(),
+      content: assistantMessage,
     });
 
     return { success: true };
   },
 });
 
-// Helper to format context for display
-export function formatContextForAssistant(context: any): string {
-  let prompt = `**JJ's Protocol:**
-- Renal-Safe Keto OMAD (One Meal A Day)
+function buildSystemPrompt(context: any): string {
+  let prompt = `You are a helpful nutrition assistant for JadOS. You help build balanced keto meals. Be concise (2-3 sentences max).
+
+**User's Protocol:**
+- Renal-Safe Keto OMAD
 - Caloric ceiling: ${context.targets?.caloricCeiling ?? 1650} kcal
 - Protein target: ${context.targets?.proteinTarget ?? 120}g
 - Fat target: ${context.targets?.fatTarget ?? 120}g
@@ -213,17 +245,25 @@ export function formatContextForAssistant(context: any): string {
 `;
 
   if (context.view === "meal_creation") {
-    prompt += `\n**Meal being built:** ${context.mealName || "(unnamed)"}`;
+    prompt += `\n**Meal:** ${context.mealName || "(unnamed)"}`;
 
     if (context.components && context.components.length > 0) {
-      prompt += `\n**Ingredients:**\n`;
+      prompt += `\n**Ingredients added:**`;
       context.components.forEach((c: any) => {
-        prompt += `- ${c.ingredientName}: ${c.weightGrams}g (${Math.round(c.calories)} cal, ${Math.round(c.protein)}g P)\n`;
+        prompt += `\n- ${c.ingredientName}: ${c.weightGrams}g (${Math.round(c.calories)} cal, ${Math.round(c.protein)}g P)`;
       });
+    } else {
+      prompt += `\n**No ingredients added yet.**`;
     }
 
     if (context.totals) {
-      prompt += `\n**Current totals:** ${Math.round(context.totals.calories)} cal, ${Math.round(context.totals.protein)}g P, ${Math.round(context.totals.fat)}g F, ${Math.round(context.totals.carbs)}g C`;
+      const t = context.totals;
+      const targets = context.targets || { caloricCeiling: 1650, proteinTarget: 120, fatTarget: 120, netCarbLimit: 25 };
+      prompt += `\n\n**Current totals:**
+- Calories: ${Math.round(t.calories)} / ${targets.caloricCeiling} (${Math.round(t.calories / targets.caloricCeiling * 100)}%)
+- Protein: ${Math.round(t.protein)}g / ${targets.proteinTarget}g (${Math.round(t.protein / targets.proteinTarget * 100)}%)
+- Fat: ${Math.round(t.fat)}g / ${targets.fatTarget}g
+- Carbs: ${Math.round(t.carbs)}g / ${targets.netCarbLimit}g`;
     }
 
     if (context.availableIngredients && context.availableIngredients.length > 0) {
@@ -232,9 +272,9 @@ export function formatContextForAssistant(context: any): string {
         if (!byCategory[ing.category]) byCategory[ing.category] = [];
         byCategory[ing.category].push(ing.name);
       });
-      prompt += `\n\n**Available ingredients:**\n`;
+      prompt += `\n\n**Available ingredients:**`;
       Object.entries(byCategory).forEach(([cat, items]) => {
-        prompt += `${cat}: ${items.slice(0, 5).join(", ")}${items.length > 5 ? ` (+${items.length - 5} more)` : ""}\n`;
+        prompt += `\n${cat}: ${items.slice(0, 8).join(", ")}${items.length > 8 ? ` (+${items.length - 8} more)` : ""}`;
       });
     }
   }

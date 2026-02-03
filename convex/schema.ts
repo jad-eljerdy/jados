@@ -217,6 +217,17 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_week", ["userId", "weekStart"]),
 
+  // ============ GLOBAL SETTINGS ============
+  globalSettings: defineTable({
+    userId: v.id("users"),
+    // AI Provider Settings
+    aiProvider: v.optional(v.string()), // "openrouter" | "anthropic" | "openai"
+    aiApiKey: v.optional(v.string()), // Encrypted or stored securely
+    aiModel: v.optional(v.string()), // e.g., "anthropic/claude-3.5-sonnet", "openai/gpt-4o"
+    // Other global settings can go here
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   // ============ ASSISTANT: CHAT MESSAGES ============
   assistantMessages: defineTable({
     userId: v.id("users"),
@@ -224,10 +235,8 @@ export default defineSchema({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     context: v.optional(v.any()), // Snapshot of context at message time
-    status: v.optional(v.union(v.literal("pending"), v.literal("responded"))),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_session", ["sessionId"])
-    .index("by_status", ["status"]),
+    .index("by_session", ["sessionId"]),
 });
