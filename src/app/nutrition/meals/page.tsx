@@ -8,9 +8,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { getAuthToken } from "@/lib/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Trash2, Plus, Utensils } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Star, Trash2, Plus, ChefHat, Flame, Beef, Loader2 } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 export default function MealsPage() {
@@ -42,106 +42,117 @@ export default function MealsPage() {
     return ingredients?.find((i) => i._id === id)?.name ?? "Unknown";
   };
 
-  if (authLoading) {
+  if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (!isAuthenticated) return null;
-
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">
-        <div className="max-w-5xl">
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-2xl font-bold">Meal Templates</h1>
-              <p className="text-muted-foreground">{meals?.length ?? 0} meals saved</p>
+              <h1 className="text-xl font-semibold">Meals</h1>
+              <p className="text-sm text-muted-foreground">{meals?.length ?? 0} templates saved</p>
             </div>
             <Button onClick={() => router.push("/nutrition/meals/new")}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Meal
+              New Meal
             </Button>
           </div>
 
           {/* Meals Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {meals?.map((meal) => (
-              <Card key={meal._id} className="relative group">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{meal.name}</CardTitle>
-                    <button
-                      onClick={() => handleToggleFavorite(meal._id, meal.isFavorite)}
-                      className="transition-colors"
-                    >
-                      <Star
-                        className={`h-5 w-5 ${
-                          meal.isFavorite
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-muted-foreground hover:text-yellow-400"
-                        }`}
-                      />
-                    </button>
+          {meals && meals.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {meals.map((meal, idx) => (
+                <div
+                  key={meal._id}
+                  className={cn(
+                    "group relative p-5 rounded-xl border border-border/50 bg-card/50 hover:bg-card hover:border-border transition-all duration-200 animate-fade-in",
+                  )}
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  {/* Favorite button */}
+                  <button
+                    onClick={() => handleToggleFavorite(meal._id, meal.isFavorite)}
+                    className="absolute top-4 right-4 p-1.5 rounded-md transition-colors"
+                  >
+                    <Star
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        meal.isFavorite
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-muted-foreground/30 hover:text-amber-400"
+                      )}
+                    />
+                  </button>
+
+                  {/* Content */}
+                  <h3 className="font-medium mb-3 pr-8">{meal.name}</h3>
+
+                  {/* Macros */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-1.5">
+                      <Flame className="h-3.5 w-3.5 text-orange-400/70" />
+                      <span className="text-sm font-medium">{Math.round(meal.totalCalories)}</span>
+                      <span className="text-xs text-muted-foreground">kcal</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Beef className="h-3.5 w-3.5 text-blue-400/70" />
+                      <span className="text-sm font-medium">{Math.round(meal.totalProtein)}g</span>
+                      <span className="text-xs text-muted-foreground">protein</span>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-semibold text-primary mb-2">
-                    {Math.round(meal.totalCalories)} kcal
-                  </div>
-                  <div className="flex gap-3 text-sm mb-4">
-                    <span className="text-blue-400">{Math.round(meal.totalProtein)}g P</span>
-                    <span className="text-yellow-400">{Math.round(meal.totalFat)}g F</span>
-                    <span className="text-green-400">{Math.round(meal.totalCarbs)}g C</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {meal.components.slice(0, 3).map((comp, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
+
+                  {/* Ingredients */}
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {meal.components.slice(0, 4).map((comp, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs font-normal">
                         {getIngredientName(comp.ingredientId)}
                       </Badge>
                     ))}
-                    {meal.components.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{meal.components.length - 3} more
+                    {meal.components.length > 4 && (
+                      <Badge variant="outline" className="text-xs font-normal">
+                        +{meal.components.length - 4}
                       </Badge>
                     )}
                   </div>
-                  <div className="flex justify-between items-center pt-3 border-t border-border">
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-3 border-t border-border/30">
                     <span className="text-xs text-muted-foreground">
                       {meal.components.length} ingredients
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
+                    <button
                       onClick={() => token && removeMeal({ token, mealId: meal._id })}
+                      className="p-1.5 rounded text-muted-foreground/30 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {(!meals || meals.length === 0) && (
-              <Card className="col-span-full">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Utensils className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground text-center">
-                    No meals yet. Create your first meal template!
-                  </p>
-                  <Button className="mt-4" onClick={() => router.push("/nutrition/meals/new")}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Meal
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Empty State */
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
+                <ChefHat className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <h3 className="font-medium mb-1">No meals yet</h3>
+              <p className="text-sm text-muted-foreground mb-6">Create your first meal template</p>
+              <Button onClick={() => router.push("/nutrition/meals/new")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Meal
+              </Button>
+            </div>
+          )}
         </div>
       </main>
     </div>

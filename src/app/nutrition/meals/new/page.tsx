@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
@@ -18,21 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus, X, Send, Loader2, Bot, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Plus, X, Send, Loader2, Sparkles, Trash2, Flame, Beef, Droplets, Wheat } from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 const SLOTS = [
-  { value: "protein_anchor", label: "Protein Anchor" },
+  { value: "protein_anchor", label: "Protein" },
   { value: "fat_source", label: "Fat Source" },
   { value: "micronutrient_veg", label: "Vegetable" },
-  { value: "condiment", label: "Condiment/Sauce" },
+  { value: "condiment", label: "Condiment" },
 ];
 
 export default function NewMealPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const token = getAuthToken();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const ingredients = useQuery(api.ingredients.list, token ? { token } : "skip");
   const config = useQuery(api.nutritionConfig.getConfig, token ? { token } : "skip");
@@ -62,16 +63,20 @@ export default function NewMealPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // Ingredient options for combobox
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Ingredient options
   const ingredientOptions =
     ingredients?.map((ing) => ({
       value: ing._id,
       label: ing.name,
-      description: `${Math.round(ing.caloriesPer100g)} cal • ${Math.round(ing.proteinPer100g)}g P • ${ing.category}`,
+      description: `${Math.round(ing.caloriesPer100g)} cal · ${Math.round(ing.proteinPer100g)}g P`,
     })) ?? [];
 
   // Calculate totals
-  const previewTotals = components.reduce(
+  const totals = components.reduce(
     (acc, comp) => {
       const ing = ingredients?.find((i) => i._id === comp.ingredientId);
       if (!ing) return acc;
@@ -86,34 +91,29 @@ export default function NewMealPage() {
     { calories: 0, protein: 0, fat: 0, carbs: 0 }
   );
 
+  const targets = config && config.exists !== false
+    ? { cal: config.caloricCeiling, p: config.proteinTarget, f: config.fatTarget, c: config.netCarbLimit }
+    : { cal: 1650, p: 120, f: 120, c: 25 };
+
   // Assistant context
   const assistantContext = {
     view: "meal_creation" as const,
     mealName: mealName || undefined,
-    components: components
-      .filter((c) => c.ingredientId)
-      .map((c) => {
-        const ing = ingredients?.find((i) => i._id === c.ingredientId);
-        const mult = c.weightGrams / 100;
-        return {
-          ingredientName: ing?.name ?? "Unknown",
-          weightGrams: c.weightGrams,
-          slot: c.slot,
-          calories: (ing?.caloriesPer100g ?? 0) * mult,
-          protein: (ing?.proteinPer100g ?? 0) * mult,
-          fat: (ing?.fatPer100g ?? 0) * mult,
-          carbs: (ing?.carbsPer100g ?? 0) * mult,
-        };
-      }),
-    totals: previewTotals,
-    targets: config && config.exists !== false
-      ? {
-          caloricCeiling: config.caloricCeiling,
-          proteinTarget: config.proteinTarget,
-          fatTarget: config.fatTarget,
-          netCarbLimit: config.netCarbLimit,
-        }
-      : undefined,
+    components: components.filter((c) => c.ingredientId).map((c) => {
+      const ing = ingredients?.find((i) => i._id === c.ingredientId);
+      const mult = c.weightGrams / 100;
+      return {
+        ingredientName: ing?.name ?? "Unknown",
+        weightGrams: c.weightGrams,
+        slot: c.slot,
+        calories: (ing?.caloriesPer100g ?? 0) * mult,
+        protein: (ing?.proteinPer100g ?? 0) * mult,
+        fat: (ing?.fatPer100g ?? 0) * mult,
+        carbs: (ing?.carbsPer100g ?? 0) * mult,
+      };
+    }),
+    totals,
+    targets: { caloricCeiling: targets.cal, proteinTarget: targets.p, fatTarget: targets.f, netCarbLimit: targets.c },
     availableIngredients: ingredients?.map((ing) => ({
       name: ing.name,
       category: ing.category,
@@ -125,10 +125,7 @@ export default function NewMealPage() {
   };
 
   const addComponent = () => {
-    setComponents([
-      ...components,
-      { slot: "protein_anchor", ingredientId: "", weightGrams: 100 },
-    ]);
+    setComponents([...components, { slot: "protein_anchor", ingredientId: "", weightGrams: 100 }]);
   };
 
   const updateComponent = (index: number, field: string, value: any) => {
@@ -142,17 +139,16 @@ export default function NewMealPage() {
   };
 
   const handleCreate = async () => {
-    if (!token || !mealName.trim() || components.length === 0) return;
-
-    const validComponents = components.filter((c) => c.ingredientId);
-    if (validComponents.length === 0) return;
+    if (!token || !mealName.trim()) return;
+    const valid = components.filter((c) => c.ingredientId);
+    if (!valid.length) return;
 
     setSaving(true);
     try {
       await createMeal({
         token,
         name: mealName,
-        components: validComponents.map((c) => ({
+        components: valid.map((c) => ({
           slot: c.slot,
           ingredientId: c.ingredientId as Id<"ingredients">,
           weightGrams: c.weightGrams,
@@ -167,18 +163,13 @@ export default function NewMealPage() {
     }
   };
 
-  const handleSendChat = async () => {
-    if (!chatInput.trim() || !token || chatLoading) return;
-    const msg = chatInput;
+  const handleChat = async (msg?: string) => {
+    const text = msg || chatInput.trim();
+    if (!text || !token || chatLoading) return;
     setChatInput("");
     setChatLoading(true);
     try {
-      await chat({
-        token,
-        sessionId: assistantSessionId,
-        message: msg,
-        context: assistantContext,
-      });
+      await chat({ token, sessionId: assistantSessionId, message: text, context: assistantContext });
     } catch (err) {
       console.error(err);
     } finally {
@@ -186,177 +177,177 @@ export default function NewMealPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (!isAuthenticated) return null;
+  const calPercent = Math.min(100, (totals.calories / targets.cal) * 100);
+  const proteinPercent = Math.min(100, (totals.protein / targets.p) * 100);
 
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
-      
-      {/* Main Content - Meal Builder */}
-      <main className="flex-1 overflow-auto p-8">
-        <div className="max-w-2xl">
+
+      {/* Main - Meal Builder */}
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-2xl mx-auto px-6 py-8">
           {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="icon" onClick={() => router.push("/nutrition/meals")}>
+          <div className="flex items-center gap-3 mb-8">
+            <button
+              onClick={() => router.push("/nutrition/meals")}
+              className="p-2 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
               <ArrowLeft className="h-5 w-5" />
-            </Button>
+            </button>
             <div>
-              <h1 className="text-2xl font-bold">Create Meal</h1>
-              <p className="text-muted-foreground">Build a new meal template</p>
+              <h1 className="text-xl font-semibold">New Meal</h1>
+              <p className="text-sm text-muted-foreground">Build your meal template</p>
             </div>
           </div>
 
           {/* Meal Name */}
-          <div className="mb-6">
+          <div className="mb-8">
             <Input
-              label="Meal Name"
               value={mealName}
               onChange={(e) => setMealName(e.target.value)}
-              placeholder="e.g., Keto Chicken Dinner"
+              placeholder="Meal name..."
+              className="text-lg font-medium h-12 bg-transparent border-0 border-b border-border/50 rounded-none px-0 focus:ring-0 focus:border-primary/50"
             />
           </div>
 
+          {/* Macro Progress */}
+          {components.some((c) => c.ingredientId) && (
+            <div className="mb-8 p-4 rounded-xl bg-card/50 border border-border/30">
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Flame className="h-3.5 w-3.5 text-orange-400" />
+                    <span className="text-xs text-muted-foreground">Calories</span>
+                  </div>
+                  <div className="text-2xl font-semibold">{Math.round(totals.calories)}</div>
+                  <div className="h-1 mt-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full bg-orange-400 transition-all" style={{ width: `${calPercent}%` }} />
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">/ {targets.cal}</div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Beef className="h-3.5 w-3.5 text-blue-400" />
+                    <span className="text-xs text-muted-foreground">Protein</span>
+                  </div>
+                  <div className="text-2xl font-semibold">{Math.round(totals.protein)}<span className="text-sm text-muted-foreground">g</span></div>
+                  <div className="h-1 mt-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full bg-blue-400 transition-all" style={{ width: `${proteinPercent}%` }} />
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">/ {targets.p}g</div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Droplets className="h-3.5 w-3.5 text-yellow-400" />
+                    <span className="text-xs text-muted-foreground">Fat</span>
+                  </div>
+                  <div className="text-2xl font-semibold">{Math.round(totals.fat)}<span className="text-sm text-muted-foreground">g</span></div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Wheat className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="text-xs text-muted-foreground">Carbs</span>
+                  </div>
+                  <div className="text-2xl font-semibold">{Math.round(totals.carbs)}<span className="text-sm text-muted-foreground">g</span></div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Ingredients */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <Label className="text-base font-semibold">Ingredients</Label>
-              <Button variant="outline" size="sm" onClick={addComponent}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Ingredient
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-muted-foreground">Ingredients</h2>
+              <Button variant="ghost" size="sm" onClick={addComponent} className="h-7 text-xs">
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add
               </Button>
             </div>
 
-            <div className="space-y-3">
-              {components.map((comp, idx) => (
-                <Card key={idx} className="bg-card/50">
-                  <CardContent className="p-4">
-                    <div className="flex gap-3 items-start">
-                      <div className="flex-1 space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs text-muted-foreground mb-1 block">
-                              Slot Type
-                            </Label>
-                            <Select
-                              value={comp.slot}
-                              onValueChange={(value) => updateComponent(idx, "slot", value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {SLOTS.map((slot) => (
-                                  <SelectItem key={slot.value} value={slot.value}>
-                                    {slot.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground mb-1 block">
-                              Weight (g)
-                            </Label>
-                            <Input
-                              type="number"
-                              value={comp.weightGrams}
-                              onChange={(e) =>
-                                updateComponent(idx, "weightGrams", Number(e.target.value))
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground mb-1 block">
-                            Ingredient
-                          </Label>
-                          <Combobox
-                            options={ingredientOptions}
-                            value={comp.ingredientId}
-                            onValueChange={(value) => updateComponent(idx, "ingredientId", value)}
-                            placeholder="Search ingredients..."
-                            searchPlaceholder="Type to search..."
-                            emptyText="No ingredients found."
-                          />
-                        </div>
+            <div className="space-y-2">
+              {components.map((comp, idx) => {
+                const ing = ingredients?.find((i) => i._id === comp.ingredientId);
+                return (
+                  <div
+                    key={idx}
+                    className="group flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/30 hover:border-border/60 transition-colors"
+                  >
+                    <div className="flex-1 grid grid-cols-12 gap-3 items-center">
+                      <div className="col-span-5">
+                        <Combobox
+                          options={ingredientOptions}
+                          value={comp.ingredientId}
+                          onValueChange={(v) => updateComponent(idx, "ingredientId", v)}
+                          placeholder="Select ingredient..."
+                          searchPlaceholder="Search..."
+                          emptyText="No ingredients"
+                        />
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-destructive shrink-0 mt-6"
-                        onClick={() => removeComponent(idx)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          value={comp.weightGrams}
+                          onChange={(e) => updateComponent(idx, "weightGrams", Number(e.target.value))}
+                          className="h-9 text-center"
+                        />
+                      </div>
+                      <div className="col-span-2 text-xs text-muted-foreground">
+                        grams
+                      </div>
+                      <div className="col-span-2">
+                        <Select value={comp.slot} onValueChange={(v) => updateComponent(idx, "slot", v)}>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SLOTS.map((s) => (
+                              <SelectItem key={s.value} value={s.value} className="text-xs">
+                                {s.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-1 flex justify-end">
+                        <button
+                          onClick={() => removeComponent(idx)}
+                          className="p-1.5 rounded text-muted-foreground/50 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                );
+              })}
 
               {components.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
-                  Add ingredients to build your meal
-                </div>
+                <button
+                  onClick={addComponent}
+                  className="w-full p-8 rounded-lg border-2 border-dashed border-border/50 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+                >
+                  <Plus className="h-5 w-5 mx-auto mb-2" />
+                  <span className="text-sm">Add your first ingredient</span>
+                </button>
               )}
             </div>
           </div>
-
-          {/* Nutrition Preview */}
-          {components.some((c) => c.ingredientId) && (
-            <Card className="bg-primary/5 border-primary/20 mb-6">
-              <CardContent className="py-4">
-                <div className="text-sm text-muted-foreground mb-2">Nutrition Preview</div>
-                <div className="flex items-center gap-6">
-                  <div>
-                    <div className="text-3xl font-bold text-primary">
-                      {Math.round(previewTotals.calories)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">kcal</div>
-                  </div>
-                  <div className="h-10 w-px bg-border" />
-                  <div className="flex gap-6 text-sm">
-                    <div>
-                      <span className="text-2xl text-blue-400 font-semibold">
-                        {Math.round(previewTotals.protein)}
-                      </span>
-                      <span className="text-muted-foreground ml-1">g P</span>
-                    </div>
-                    <div>
-                      <span className="text-2xl text-yellow-400 font-semibold">
-                        {Math.round(previewTotals.fat)}
-                      </span>
-                      <span className="text-muted-foreground ml-1">g F</span>
-                    </div>
-                    <div>
-                      <span className="text-2xl text-green-400 font-semibold">
-                        {Math.round(previewTotals.carbs)}
-                      </span>
-                      <span className="text-muted-foreground ml-1">g C</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Actions */}
           <div className="flex gap-3">
             <Button variant="ghost" onClick={() => router.push("/nutrition/meals")}>
               Cancel
             </Button>
-            <Button
-              onClick={handleCreate}
-              loading={saving}
-              disabled={!mealName.trim() || !components.some((c) => c.ingredientId)}
-            >
+            <Button onClick={handleCreate} loading={saving} disabled={!mealName.trim() || !components.some((c) => c.ingredientId)}>
               Create Meal
             </Button>
           </div>
@@ -364,49 +355,45 @@ export default function NewMealPage() {
       </main>
 
       {/* Right Panel - Assistant */}
-      <aside className="w-96 border-l border-border flex flex-col bg-card">
+      <aside className="w-80 border-l border-border/50 flex flex-col bg-card/30">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between h-14 px-4 border-b border-border/50">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-primary" />
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
             </div>
-            <div>
-              <h3 className="font-semibold text-sm">Son of Anton</h3>
-              <p className="text-xs text-muted-foreground">Nutrition Assistant</p>
-            </div>
+            <span className="text-sm font-medium">Assistant</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={() => token && clearSession({ token, sessionId: assistantSessionId })}
-            title="Clear chat"
+            className="p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
           {(!messages || messages.length === 0) && (
-            <div className="text-center text-muted-foreground text-sm py-8">
-              <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Ask me anything about your meal!</p>
-              <p className="text-xs mt-1">I can see what you're building.</p>
+            <div className="text-center py-12">
+              <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">Ask me anything</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">I can see what you're building</p>
             </div>
           )}
-          
+
           {messages?.map((msg) => (
             <div
               key={msg._id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              className={cn("flex animate-fade-in", msg.role === "user" ? "justify-end" : "justify-start")}
             >
               <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                className={cn(
+                  "max-w-[85%] rounded-xl px-3 py-2 text-sm",
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground"
-                }`}
+                    : "bg-muted/50 text-foreground"
+                )}
               >
                 {msg.content}
               </div>
@@ -414,50 +401,44 @@ export default function NewMealPage() {
           ))}
 
           {chatLoading && (
-            <div className="flex justify-start">
-              <div className="bg-secondary rounded-lg px-3 py-2 flex items-center gap-2">
+            <div className="flex justify-start animate-fade-in">
+              <div className="bg-muted/50 rounded-xl px-3 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Thinking...</span>
               </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Quick Actions */}
         {(!messages || messages.length < 2) && (
-          <div className="px-4 py-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-2">Quick questions:</p>
-            <div className="flex flex-wrap gap-1">
-              {["Suggest protein", "Check macros", "Add vegetables", "Is this balanced?"].map(
-                (q) => (
-                  <button
-                    key={q}
-                    onClick={() => {
-                      setChatInput(q);
-                      setTimeout(() => handleSendChat(), 0);
-                    }}
-                    disabled={chatLoading}
-                    className="text-xs px-2 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors"
-                  >
-                    {q}
-                  </button>
-                )
-              )}
+          <div className="px-4 py-2 border-t border-border/30">
+            <div className="flex flex-wrap gap-1.5">
+              {["Suggest protein", "Check macros", "What's missing?"].map((q) => (
+                <button
+                  key={q}
+                  onClick={() => handleChat(q)}
+                  disabled={chatLoading}
+                  className="text-xs px-2.5 py-1 rounded-full bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
         {/* Input */}
-        <div className="p-4 border-t border-border">
+        <div className="p-3 border-t border-border/50">
           <div className="flex gap-2">
             <Input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendChat()}
-              placeholder="Ask me anything..."
-              className="flex-1"
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleChat()}
+              placeholder="Ask anything..."
+              className="flex-1 h-9 text-sm"
             />
-            <Button size="icon" onClick={handleSendChat} disabled={!chatInput.trim() || chatLoading}>
+            <Button size="icon" onClick={() => handleChat()} disabled={!chatInput.trim() || chatLoading} className="h-9 w-9">
               <Send className="h-4 w-4" />
             </Button>
           </div>
