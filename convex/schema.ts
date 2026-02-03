@@ -216,4 +216,16 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_week", ["userId", "weekStart"]),
+
+  // ============ ASSISTANT: CHAT MESSAGES ============
+  assistantMessages: defineTable({
+    userId: v.id("users"),
+    sessionId: v.string(), // Unique per chat context (e.g., "meal_creation_<timestamp>")
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    context: v.optional(v.any()), // Snapshot of context at message time
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_session", ["sessionId"]),
 });

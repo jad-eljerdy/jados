@@ -27,8 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Star, Trash2, Plus, X, Utensils } from "lucide-react";
+import { Star, Trash2, Plus, X, Utensils, Sparkles } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { AssistantSidebar } from "@/components/assistant/AssistantSidebar";
 
 const SLOTS = [
   { value: "protein_anchor", label: "Protein Anchor" },
@@ -44,6 +45,7 @@ export default function MealsPage() {
 
   const meals = useQuery(api.meals.list, token ? { token } : "skip");
   const ingredients = useQuery(api.ingredients.list, token ? { token } : "skip");
+  const config = useQuery(api.nutritionConfig.getConfig, token ? { token } : "skip");
   const createMeal = useMutation(api.meals.create);
   const removeMeal = useMutation(api.meals.remove);
   const toggleFavorite = useMutation(api.meals.update);
@@ -54,6 +56,10 @@ export default function MealsPage() {
     Array<{ slot: string; ingredientId: string; weightGrams: number }>
   >([]);
   const [saving, setSaving] = useState(false);
+  
+  // Assistant state
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantSessionId] = useState(() => `meal_creation_${Date.now()}`);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -159,6 +165,44 @@ export default function MealsPage() {
     return ingredients?.find((i) => i._id === id)?.name ?? "Unknown";
   };
 
+  // Build assistant context
+  const assistantContext = {
+    view: "meal_creation" as const,
+    mealName: mealName || undefined,
+    components: components
+      .filter((c) => c.ingredientId)
+      .map((c) => {
+        const ing = ingredients?.find((i) => i._id === c.ingredientId);
+        const mult = c.weightGrams / 100;
+        return {
+          ingredientName: ing?.name ?? "Unknown",
+          weightGrams: c.weightGrams,
+          slot: c.slot,
+          calories: (ing?.caloriesPer100g ?? 0) * mult,
+          protein: (ing?.proteinPer100g ?? 0) * mult,
+          fat: (ing?.fatPer100g ?? 0) * mult,
+          carbs: (ing?.carbsPer100g ?? 0) * mult,
+        };
+      }),
+    totals: previewTotals,
+    targets: config && config.exists !== false
+      ? {
+          caloricCeiling: config.caloricCeiling,
+          proteinTarget: config.proteinTarget,
+          fatTarget: config.fatTarget,
+          netCarbLimit: config.netCarbLimit,
+        }
+      : undefined,
+    availableIngredients: ingredients?.map((ing) => ({
+      name: ing.name,
+      category: ing.category,
+      caloriesPer100g: ing.caloriesPer100g,
+      proteinPer100g: ing.proteinPer100g,
+      fatPer100g: ing.fatPer100g,
+      carbsPer100g: ing.carbsPer100g,
+    })),
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
@@ -255,7 +299,18 @@ export default function MealsPage() {
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create Meal Template</DialogTitle>
+              <div className="flex items-center justify-between">
+                <DialogTitle>Create Meal Template</DialogTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAssistantOpen(true)}
+                  className="gap-2"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Ask Assistant
+                </Button>
+              </div>
             </DialogHeader>
 
             <div className="space-y-6 py-4">
@@ -403,6 +458,14 @@ export default function MealsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Assistant Sidebar */}
+        <AssistantSidebar
+          isOpen={assistantOpen}
+          onClose={() => setAssistantOpen(false)}
+          sessionId={assistantSessionId}
+          context={assistantContext}
+        />
       </main>
     </div>
   );
