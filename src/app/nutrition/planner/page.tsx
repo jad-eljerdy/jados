@@ -79,7 +79,7 @@ export default function PlannerPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
       </div>
     );
@@ -90,14 +90,14 @@ export default function PlannerPage() {
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="flex h-screen bg-zinc-950">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto p-8">
         <div className="max-w-5xl">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-white">Meal Planner</h1>
-              <p className="text-zinc-400">
+              <h1 className="text-2xl font-bold text-foreground">Meal Planner</h1>
+              <p className="text-muted-foreground">
                 Week of {formatDate(currentWeekStart)} •{" "}
                 {config?.caloricCeiling ?? 1650} kcal / {config?.proteinTarget ?? 120}g P target
               </p>
@@ -125,12 +125,12 @@ export default function PlannerPage() {
               return (
                 <div
                   key={day.date}
-                  className={`bg-zinc-900 rounded-xl p-4 min-h-[200px] ${
+                  className={`bg-card rounded-xl p-4 min-h-[200px] ${
                     isToday ? "ring-2 ring-green-500" : ""
                   } ${isConsumed ? "opacity-60" : ""}`}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-zinc-400">
+                    <span className="text-sm font-medium text-muted-foreground">
                       {DAYS[day.dayOfWeek]}
                     </span>
                     <span className={`text-sm ${isToday ? "text-green-400" : "text-zinc-500"}`}>
@@ -179,7 +179,7 @@ export default function PlannerPage() {
                         setSelectedDay(day.date);
                         setShowMealPicker(true);
                       }}
-                      className="w-full h-24 border-2 border-dashed border-zinc-700 rounded-lg flex items-center justify-center text-zinc-500 hover:border-zinc-600 hover:text-zinc-400 transition-colors"
+                      className="w-full h-24 border-2 border-dashed border-zinc-700 rounded-lg flex items-center justify-center text-zinc-500 hover:border-zinc-600 hover:text-muted-foreground transition-colors"
                     >
                       + Add Meal
                     </button>
@@ -204,9 +204,9 @@ export default function PlannerPage() {
         {/* Meal Picker Modal */}
         {showMealPicker && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-900 rounded-xl w-full max-w-md max-h-[70vh] overflow-hidden">
-              <div className="p-6 border-b border-zinc-800">
-                <h2 className="text-lg font-semibold text-white">
+            <div className="bg-card rounded-xl w-full max-w-md max-h-[70vh] overflow-hidden">
+              <div className="p-6 border-b border-border">
+                <h2 className="text-lg font-semibold text-foreground">
                   Select Meal for {selectedDay && formatDate(selectedDay)}
                 </h2>
               </div>
@@ -216,10 +216,10 @@ export default function PlannerPage() {
                   <button
                     key={meal._id}
                     onClick={() => handleSelectMeal(meal._id)}
-                    className="w-full p-4 text-left border-b border-zinc-800/50 hover:bg-zinc-800/50"
+                    className="w-full p-4 text-left border-b border-border/50 hover:bg-zinc-800/50"
                   >
-                    <div className="text-white font-medium">{meal.name}</div>
-                    <div className="text-sm text-zinc-400 mt-1">
+                    <div className="text-foreground font-medium">{meal.name}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
                       {Math.round(meal.totalCalories)} kcal • {Math.round(meal.totalProtein)}g P •{" "}
                       {Math.round(meal.totalFat)}g F • {Math.round(meal.totalCarbs)}g C
                     </div>
@@ -232,7 +232,7 @@ export default function PlannerPage() {
                 )}
               </div>
 
-              <div className="p-6 border-t border-zinc-800">
+              <div className="p-6 border-t border-border">
                 <Button variant="ghost" onClick={() => setShowMealPicker(false)} className="w-full">
                   Cancel
                 </Button>

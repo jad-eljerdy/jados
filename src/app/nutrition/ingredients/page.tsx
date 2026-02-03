@@ -175,7 +175,7 @@ export default function IngredientsPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
       </div>
     );
@@ -184,14 +184,14 @@ export default function IngredientsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-screen bg-zinc-950">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto p-8">
         <div className="max-w-4xl">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-white">Ingredients Database</h1>
-              <p className="text-zinc-400">
+              <h1 className="text-2xl font-bold text-foreground">Ingredients Database</h1>
+              <p className="text-muted-foreground">
                 {ingredients?.length ?? 0} ingredients •{" "}
                 {categories?.map((c) => `${c.count} ${c.name}`).join(", ") || "No categories"}
               </p>
@@ -221,25 +221,25 @@ export default function IngredientsPage() {
           )}
 
           {/* Ingredients List */}
-          <div className="bg-zinc-900 rounded-xl overflow-hidden">
+          <div className="bg-card rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-zinc-800">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">Category</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-zinc-400">Cal</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-zinc-400">P</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-zinc-400">F</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-zinc-400">C</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-zinc-400">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Name</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Category</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Cal</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">P</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">F</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">C</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {ingredients?.map((ing) => (
-                  <tr key={ing._id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
+                  <tr key={ing._id} className="border-b border-border/50 hover:bg-zinc-800/30">
                     <td className="px-4 py-3">
                       <div>
-                        <span className="text-white">{ing.name}</span>
+                        <span className="text-foreground">{ing.name}</span>
                         {ing.isPantryEssential && (
                           <span className="ml-2 text-xs bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded">
                             pantry
@@ -247,7 +247,7 @@ export default function IngredientsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400 capitalize">{ing.category}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground capitalize">{ing.category}</td>
                     <td className="px-4 py-3 text-sm text-zinc-300 text-right">{Math.round(ing.caloriesPer100g)}</td>
                     <td className="px-4 py-3 text-sm text-blue-400 text-right">{Math.round(ing.proteinPer100g)}g</td>
                     <td className="px-4 py-3 text-sm text-yellow-400 text-right">{Math.round(ing.fatPer100g)}g</td>
@@ -277,9 +277,9 @@ export default function IngredientsPage() {
         {/* USDA Search Modal */}
         {showUSDAModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-900 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-              <div className="p-6 border-b border-zinc-800">
-                <h2 className="text-lg font-semibold text-white">Search USDA Database</h2>
+            <div className="bg-card rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+              <div className="p-6 border-b border-border">
+                <h2 className="text-lg font-semibold text-foreground">Search USDA Database</h2>
                 <div className="flex gap-2 mt-4">
                   <Input
                     value={usdaQuery}
@@ -298,12 +298,12 @@ export default function IngredientsPage() {
                   <div
                     key={food.fdcId}
                     onClick={() => setSelectedUSDA(food)}
-                    className={`p-4 border-b border-zinc-800/50 cursor-pointer hover:bg-zinc-800/50 ${
+                    className={`p-4 border-b border-border/50 cursor-pointer hover:bg-zinc-800/50 ${
                       selectedUSDA?.fdcId === food.fdcId ? "bg-green-900/20 border-l-2 border-l-green-500" : ""
                     }`}
                   >
-                    <div className="text-white font-medium">{food.name}</div>
-                    <div className="text-sm text-zinc-400 mt-1">
+                    <div className="text-foreground font-medium">{food.name}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
                       {Math.round(food.caloriesPer100g)} cal • {Math.round(food.proteinPer100g)}g P •{" "}
                       {Math.round(food.fatPer100g)}g F • {Math.round(food.carbsPer100g)}g C
                     </div>
@@ -315,15 +315,15 @@ export default function IngredientsPage() {
               </div>
 
               {selectedUSDA && (
-                <div className="p-6 border-t border-zinc-800 space-y-4">
-                  <div className="text-sm text-zinc-400">Configure before importing:</div>
+                <div className="p-6 border-t border-border space-y-4">
+                  <div className="text-sm text-muted-foreground">Configure before importing:</div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm text-zinc-400 mb-1">Category</label>
+                      <label className="block text-sm text-muted-foreground mb-1">Category</label>
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white"
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-foreground"
                       >
                         {CATEGORIES.map((c) => (
                           <option key={c} value={c}>
@@ -339,13 +339,13 @@ export default function IngredientsPage() {
                         onChange={(e) => setIsPantryEssential(e.target.checked)}
                         className="w-4 h-4"
                       />
-                      <span className="text-sm text-zinc-400">Pantry Essential</span>
+                      <span className="text-sm text-muted-foreground">Pantry Essential</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="p-6 border-t border-zinc-800 flex justify-end gap-2">
+              <div className="p-6 border-t border-border flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setShowUSDAModal(false)}>
                   Cancel
                 </Button>
@@ -360,9 +360,9 @@ export default function IngredientsPage() {
         {/* Manual Add Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-900 rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
-              <div className="p-6 border-b border-zinc-800">
-                <h2 className="text-lg font-semibold text-white">Add Ingredient Manually</h2>
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+              <div className="p-6 border-b border-border">
+                <h2 className="text-lg font-semibold text-foreground">Add Ingredient Manually</h2>
               </div>
 
               <div className="p-6 space-y-4">
@@ -374,11 +374,11 @@ export default function IngredientsPage() {
                 />
 
                 <div>
-                  <label className="block text-sm text-zinc-400 mb-1">Category</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Category</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-foreground"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>
@@ -388,7 +388,7 @@ export default function IngredientsPage() {
                   </select>
                 </div>
 
-                <div className="text-sm font-medium text-zinc-400 pt-2">Nutrition per 100g (raw)</div>
+                <div className="text-sm font-medium text-muted-foreground pt-2">Nutrition per 100g (raw)</div>
                 <div className="grid grid-cols-2 gap-3">
                   <Input
                     label="Calories"
@@ -441,11 +441,11 @@ export default function IngredientsPage() {
                     onChange={(e) => setIsPantryEssential(e.target.checked)}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-zinc-400">Pantry Essential (oil, spice, etc.)</span>
+                  <span className="text-sm text-muted-foreground">Pantry Essential (oil, spice, etc.)</span>
                 </div>
               </div>
 
-              <div className="p-6 border-t border-zinc-800 flex justify-end gap-2">
+              <div className="p-6 border-t border-border flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setShowAddModal(false)}>
                   Cancel
                 </Button>

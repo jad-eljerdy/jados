@@ -28,15 +28,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-background px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl p-8">
+        <div className="bg-white dark:bg-card rounded-2xl shadow-xl p-8">
           {/* Logo/Brand */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-foreground">
               JadOS
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-2">
+            <p className="text-zinc-500 dark:text-muted-foreground mt-2">
               Sign in to your life operating system
             </p>
           </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          <div className="mt-6 text-center text-sm text-zinc-500 dark:text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="text-indigo-600 hover:text-indigo-500 font-medium">
               Sign up
@@ -92,7 +92,7 @@ export default function LoginPage() {
         </div>
 
         {/* Version */}
-        <p className="text-center text-xs text-zinc-400 mt-4">
+        <p className="text-center text-xs text-muted-foreground mt-4">
           JadOS v0.1.0
         </p>
       </div>

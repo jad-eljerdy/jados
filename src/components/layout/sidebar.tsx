@@ -64,11 +64,11 @@ export function Sidebar() {
   const isNutritionActive = pathname.startsWith("/nutrition");
 
   return (
-    <div className="flex h-full w-64 flex-col bg-zinc-900">
+    <div className="flex h-full w-64 flex-col bg-card">
       {/* Logo */}
       <div className="flex h-16 items-center px-6">
-        <span className="text-xl font-bold text-white">JadOS</span>
-        <span className="ml-2 text-xs text-zinc-500">v0.1</span>
+        <span className="text-xl font-bold text-foreground">JadOS</span>
+        <span className="ml-2 text-xs text-muted-foreground">v0.1</span>
       </div>
 
       {/* Navigation */}
@@ -83,8 +83,8 @@ export function Sidebar() {
               className={`
                 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
                 ${isActive
-                  ? "bg-indigo-600 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                  ? "bg-indigo-600 text-foreground"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }
               `}
             >
@@ -102,7 +102,7 @@ export function Sidebar() {
               w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
               ${isNutritionActive
                 ? "bg-green-600/20 text-green-400"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }
             `}
           >
@@ -114,7 +114,7 @@ export function Sidebar() {
           </button>
 
           {nutritionExpanded && (
-            <div className="mt-1 ml-4 space-y-1 border-l border-zinc-800 pl-4">
+            <div className="mt-1 ml-4 space-y-1 border-l border-border pl-4">
               {nutritionNavigation.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -125,7 +125,7 @@ export function Sidebar() {
                       block rounded-lg px-3 py-1.5 text-sm transition-colors
                       ${isActive
                         ? "text-green-400 bg-green-600/10"
-                        : "text-zinc-500 hover:text-zinc-300"
+                        : "text-muted-foreground hover:text-zinc-300"
                       }
                     `}
                   >
@@ -138,11 +138,11 @@ export function Sidebar() {
         </div>
 
         {/* Future modules placeholder */}
-        <div className="pt-4 border-t border-zinc-800 mt-4">
-          <p className="px-3 py-2 text-xs font-medium text-zinc-600 uppercase tracking-wider">
+        <div className="pt-4 border-t border-border mt-4">
+          <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Coming Soon
           </p>
-          <div className="space-y-1 text-zinc-600">
+          <div className="space-y-1 text-muted-foreground">
             <div className="flex items-center gap-3 px-3 py-2 text-sm">
               <span>💪</span> Fitness
             </div>
@@ -157,23 +157,23 @@ export function Sidebar() {
       </nav>
 
       {/* User section */}
-      <div className="border-t border-zinc-800 p-4">
+      <div className="border-t border-border p-4">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium">
+          <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-foreground font-medium">
             {user?.name?.charAt(0) ?? "?"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">
+            <p className="text-sm font-medium text-foreground truncate">
               {user?.name ?? "Loading..."}
             </p>
-            <p className="text-xs text-zinc-400 truncate">
+            <p className="text-xs text-muted-foreground truncate">
               {user?.email ?? ""}
             </p>
           </div>
         </div>
         <button
           onClick={() => logout()}
-          className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+          className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />

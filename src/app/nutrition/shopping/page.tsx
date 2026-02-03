@@ -85,7 +85,7 @@ export default function ShoppingListPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
       </div>
     );
@@ -94,14 +94,14 @@ export default function ShoppingListPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-screen bg-zinc-950">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto p-8">
         <div className="max-w-2xl">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-white">Shopping List</h1>
-              <p className="text-zinc-400">
+              <h1 className="text-2xl font-bold text-foreground">Shopping List</h1>
+              <p className="text-muted-foreground">
                 Week of {new Date(currentWeekStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 {" → "}
                 {new Date(weekEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -125,7 +125,7 @@ export default function ShoppingListPage() {
                 onChange={(e) => setExcludePantry(e.target.checked)}
                 className="w-4 h-4 rounded bg-zinc-800 border-zinc-700"
               />
-              <span className="text-sm text-zinc-400">Hide pantry essentials</span>
+              <span className="text-sm text-muted-foreground">Hide pantry essentials</span>
             </label>
 
             <div className="flex gap-2">
@@ -142,22 +142,22 @@ export default function ShoppingListPage() {
           {shoppingList ? (
             <div className="space-y-6">
               {Object.entries(shoppingList.categories).map(([category, items]) => (
-                <div key={category} className="bg-zinc-900 rounded-xl p-5">
-                  <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-3">
+                <div key={category} className="bg-card rounded-xl p-5">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
                     {category}
                   </h3>
                   <div className="space-y-2">
                     {items.map((item, idx) => (
                       <div
                         key={idx}
-                        className={`flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0 ${
+                        className={`flex items-center justify-between py-2 border-b border-border/50 last:border-0 ${
                           item.checked ? "opacity-50" : ""
                         }`}
                       >
-                        <span className={`text-white ${item.checked ? "line-through" : ""}`}>
+                        <span className={`text-foreground ${item.checked ? "line-through" : ""}`}>
                           {item.name}
                         </span>
-                        <span className="text-zinc-400 font-mono">{item.weight}</span>
+                        <span className="text-muted-foreground font-mono">{item.weight}</span>
                       </div>
                     ))}
                   </div>
@@ -169,8 +169,8 @@ export default function ShoppingListPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-zinc-900 rounded-xl p-8 text-center">
-              <p className="text-zinc-400 mb-4">
+            <div className="bg-card rounded-xl p-8 text-center">
+              <p className="text-muted-foreground mb-4">
                 No shopping list for this week yet.
               </p>
               <p className="text-sm text-zinc-500 mb-4">

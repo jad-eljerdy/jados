@@ -1,44 +1,38 @@
-import { forwardRef, InputHTMLAttributes } from "react";
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  error?: string;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = "", label, error, id, ...props }, ref) => {
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, label, id, ...props }, ref) => {
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
+    
     return (
-      <div className="w-full">
+      <div className="space-y-1.5">
         {label && (
           <label
-            htmlFor={id}
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            htmlFor={inputId}
+            className="text-sm font-medium text-muted-foreground"
           >
             {label}
           </label>
         )}
         <input
+          type={type}
+          id={inputId}
+          className={cn(
+            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            className
+          )}
           ref={ref}
-          id={id}
-          className={`
-            w-full px-3 py-2 rounded-lg border transition-colors
-            bg-white dark:bg-zinc-900
-            text-zinc-900 dark:text-zinc-100
-            placeholder:text-zinc-400 dark:placeholder:text-zinc-600
-            border-zinc-300 dark:border-zinc-700
-            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-            disabled:opacity-50 disabled:cursor-not-allowed
-            ${error ? "border-red-500 focus:ring-red-500" : ""}
-            ${className}
-          `}
           {...props}
         />
-        {error && (
-          <p className="mt-1 text-sm text-red-500">{error}</p>
-        )}
       </div>
     );
   }
 );
-
 Input.displayName = "Input";
+
+export { Input };

@@ -99,7 +99,7 @@ export default function NutritionSettingsPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
       </div>
     );
@@ -108,16 +108,16 @@ export default function NutritionSettingsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-screen bg-zinc-950">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto p-8">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-bold text-white mb-2">Nutrition Settings</h1>
-          <p className="text-zinc-400 mb-8">Configure your dietary targets and medical constraints</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Nutrition Settings</h1>
+          <p className="text-muted-foreground mb-8">Configure your dietary targets and medical constraints</p>
 
           {/* Caloric & Macro Targets */}
-          <section className="bg-zinc-900 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Daily Targets</h2>
+          <section className="bg-card rounded-xl p-6 mb-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Daily Targets</h2>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="caloricCeiling"
@@ -151,8 +151,8 @@ export default function NutritionSettingsPage() {
           </section>
 
           {/* Medical Flags */}
-          <section className="bg-zinc-900 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Medical Protocols</h2>
+          <section className="bg-card rounded-xl p-6 mb-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Medical Protocols</h2>
             <div className="space-y-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -162,8 +162,8 @@ export default function NutritionSettingsPage() {
                   className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-green-600 focus:ring-green-600"
                 />
                 <div>
-                  <span className="text-white font-medium">Keto Protocol</span>
-                  <p className="text-sm text-zinc-400">Enforce net carb limits across all meals</p>
+                  <span className="text-foreground font-medium">Keto Protocol</span>
+                  <p className="text-sm text-muted-foreground">Enforce net carb limits across all meals</p>
                 </div>
               </label>
 
@@ -175,8 +175,8 @@ export default function NutritionSettingsPage() {
                   className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-green-600 focus:ring-green-600"
                 />
                 <div>
-                  <span className="text-white font-medium">Renal Protection</span>
-                  <p className="text-sm text-zinc-400">Cap protein density, highlight low-purine sources</p>
+                  <span className="text-foreground font-medium">Renal Protection</span>
+                  <p className="text-sm text-muted-foreground">Cap protein density, highlight low-purine sources</p>
                 </div>
               </label>
 
@@ -188,8 +188,8 @@ export default function NutritionSettingsPage() {
                   className="w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-green-600 focus:ring-green-600"
                 />
                 <div>
-                  <span className="text-white font-medium">Hypertension Management</span>
-                  <p className="text-sm text-zinc-400">Track sodium:potassium ratios</p>
+                  <span className="text-foreground font-medium">Hypertension Management</span>
+                  <p className="text-sm text-muted-foreground">Track sodium:potassium ratios</p>
                 </div>
               </label>
 
@@ -215,8 +215,8 @@ export default function NutritionSettingsPage() {
           </section>
 
           {/* Schedule Mode */}
-          <section className="bg-zinc-900 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Eating Schedule</h2>
+          <section className="bg-card rounded-xl p-6 mb-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Eating Schedule</h2>
             <div className="space-y-3">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -227,8 +227,8 @@ export default function NutritionSettingsPage() {
                   className="w-5 h-5 bg-zinc-800 border-zinc-700 text-green-600 focus:ring-green-600"
                 />
                 <div>
-                  <span className="text-white font-medium">OMAD Standard</span>
-                  <p className="text-sm text-zinc-400">1 meal per day, Mon-Sun</p>
+                  <span className="text-foreground font-medium">OMAD Standard</span>
+                  <p className="text-sm text-muted-foreground">1 meal per day, Mon-Sun</p>
                 </div>
               </label>
 
@@ -241,8 +241,8 @@ export default function NutritionSettingsPage() {
                   className="w-5 h-5 bg-zinc-800 border-zinc-700 text-green-600 focus:ring-green-600"
                 />
                 <div>
-                  <span className="text-white font-medium">Weekend IF</span>
-                  <p className="text-sm text-zinc-400">1 meal Mon-Fri, multiple meals Sat-Sun</p>
+                  <span className="text-foreground font-medium">Weekend IF</span>
+                  <p className="text-sm text-muted-foreground">1 meal Mon-Fri, multiple meals Sat-Sun</p>
                 </div>
               </label>
 
@@ -263,8 +263,8 @@ export default function NutritionSettingsPage() {
           </section>
 
           {/* Biometrics (temporary) */}
-          <section className="bg-zinc-900 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-1">Biometrics</h2>
+          <section className="bg-card rounded-xl p-6 mb-6">
+            <h2 className="text-lg font-semibold text-foreground mb-1">Biometrics</h2>
             <p className="text-sm text-zinc-500 mb-4">Will move to Biology module</p>
             <div className="grid grid-cols-2 gap-4">
               <Input
