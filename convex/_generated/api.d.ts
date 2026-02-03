@@ -10,7 +10,13 @@
 
 import type * as auth from "../auth.js";
 import type * as functions from "../functions.js";
+import type * as ingredients from "../ingredients.js";
+import type * as mealPlans from "../mealPlans.js";
+import type * as meals from "../meals.js";
+import type * as nutritionConfig from "../nutritionConfig.js";
 import type * as seed from "../seed.js";
+import type * as shoppingList from "../shoppingList.js";
+import type * as usda from "../usda.js";
 import type * as users from "../users.js";
 
 import type {
@@ -22,7 +28,13 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   functions: typeof functions;
+  ingredients: typeof ingredients;
+  mealPlans: typeof mealPlans;
+  meals: typeof meals;
+  nutritionConfig: typeof nutritionConfig;
   seed: typeof seed;
+  shoppingList: typeof shoppingList;
+  usda: typeof usda;
   users: typeof users;
 }>;
 
