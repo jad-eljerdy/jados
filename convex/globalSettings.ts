@@ -19,7 +19,7 @@ export const get = query({
       return {
         exists: false,
         aiProvider: "openrouter",
-        aiModel: "anthropic/claude-3.5-sonnet",
+        aiModel: "anthropic/claude-sonnet-4-20250514",
         hasApiKey: false,
       };
     }
@@ -27,7 +27,7 @@ export const get = query({
     return {
       exists: true,
       aiProvider: settings.aiProvider ?? "openrouter",
-      aiModel: settings.aiModel ?? "anthropic/claude-3.5-sonnet",
+      aiModel: settings.aiModel ?? "anthropic/claude-sonnet-4-20250514",
       hasApiKey: !!settings.aiApiKey,
     };
   },

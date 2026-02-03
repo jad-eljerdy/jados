@@ -94,7 +94,7 @@ export const _getApiConfig = internalQuery({
     return {
       provider: settings.aiProvider ?? "openrouter",
       apiKey: settings.aiApiKey,
-      model: settings.aiModel ?? "anthropic/claude-3.5-sonnet",
+      model: settings.aiModel ?? "anthropic/claude-sonnet-4-20250514",
     };
   },
 });

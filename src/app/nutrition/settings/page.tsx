@@ -16,15 +16,11 @@ export default function NutritionSettingsPage() {
   const token = getAuthToken();
 
   const config = useQuery(api.nutritionConfig.getConfig, token ? { token } : "skip");
-  const globalSettings = useQuery(api.globalSettings.get, token ? { token } : "skip");
   const initializeConfig = useMutation(api.nutritionConfig.initializeConfig);
   const updateConfig = useMutation(api.nutritionConfig.updateConfig);
-  const updateGlobalSettings = useMutation(api.globalSettings.update);
 
   const [saving, setSaving] = useState(false);
-  const [savingAI, setSavingAI] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [aiSuccess, setAiSuccess] = useState(false);
 
   // Form state
   const [caloricCeiling, setCaloricCeiling] = useState(1650);
@@ -41,22 +37,11 @@ export default function NutritionSettingsPage() {
   const [currentWeight, setCurrentWeight] = useState<number | undefined>();
   const [goalWeight, setGoalWeight] = useState<number | undefined>();
 
-  // AI Assistant state
-  const [aiApiKey, setAiApiKey] = useState("");
-  const [aiModel, setAiModel] = useState("anthropic/claude-3.5-sonnet");
-
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [isAuthenticated, authLoading, router]);
-
-  useEffect(() => {
-    if (globalSettings) {
-      setAiModel(globalSettings.aiModel || "anthropic/claude-3.5-sonnet");
-      // Don't populate the API key field for security
-    }
-  }, [globalSettings]);
 
   useEffect(() => {
     if (config && config.exists !== false) {
@@ -302,106 +287,13 @@ export default function NutritionSettingsPage() {
           </section>
 
           {/* Save Button */}
-          <div className="flex items-center gap-3 mb-12">
+          <div className="flex items-center gap-3">
             <Button onClick={handleSave} loading={saving} size="lg">
-              Save Nutrition Settings
+              Save Settings
             </Button>
             {success && (
               <span className="text-sm text-green-400">✓ Settings saved</span>
             )}
-          </div>
-
-          {/* AI Assistant Settings */}
-          <div className="border-t border-border pt-8">
-            <h1 className="text-2xl font-bold text-foreground mb-2">AI Assistant</h1>
-            <p className="text-muted-foreground mb-8">Configure the in-app nutrition assistant</p>
-
-            <section className="bg-card rounded-xl p-6 mb-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">OpenRouter API</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get your API key at{" "}
-                <a 
-                  href="https://openrouter.ai/keys" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  openrouter.ai/keys
-                </a>
-              </p>
-              
-              <div className="space-y-4">
-                <Input
-                  id="aiApiKey"
-                  type="password"
-                  label="API Key"
-                  value={aiApiKey}
-                  onChange={(e) => setAiApiKey(e.target.value)}
-                  placeholder={globalSettings?.hasApiKey ? "••••••••••••••••" : "sk-or-..."}
-                />
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-1">Model</label>
-                  <select
-                    value={aiModel}
-                    onChange={(e) => setAiModel(e.target.value)}
-                    className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <optgroup label="Claude (Anthropic)">
-                      <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (recommended)</option>
-                      <option value="anthropic/claude-3-haiku">Claude 3 Haiku (fast & cheap)</option>
-                      <option value="anthropic/claude-3-opus">Claude 3 Opus (most capable)</option>
-                    </optgroup>
-                    <optgroup label="GPT (OpenAI)">
-                      <option value="openai/gpt-4o">GPT-4o</option>
-                      <option value="openai/gpt-4o-mini">GPT-4o Mini (fast & cheap)</option>
-                      <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
-                    </optgroup>
-                    <optgroup label="Other">
-                      <option value="google/gemini-pro-1.5">Gemini Pro 1.5</option>
-                      <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B</option>
-                      <option value="mistralai/mixtral-8x7b-instruct">Mixtral 8x7B</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                {globalSettings?.hasApiKey && (
-                  <p className="text-xs text-green-400">✓ API key configured</p>
-                )}
-              </div>
-            </section>
-
-            <div className="flex items-center gap-3">
-              <Button 
-                onClick={async () => {
-                  if (!token) return;
-                  setSavingAI(true);
-                  setAiSuccess(false);
-                  try {
-                    await updateGlobalSettings({
-                      token,
-                      aiProvider: "openrouter",
-                      aiModel,
-                      ...(aiApiKey ? { aiApiKey } : {}),
-                    });
-                    setAiSuccess(true);
-                    setAiApiKey(""); // Clear the input after save
-                    setTimeout(() => setAiSuccess(false), 3000);
-                  } catch (err) {
-                    console.error(err);
-                  } finally {
-                    setSavingAI(false);
-                  }
-                }} 
-                loading={savingAI} 
-                size="lg"
-              >
-                Save AI Settings
-              </Button>
-              {aiSuccess && (
-                <span className="text-sm text-green-400">✓ AI settings saved</span>
-              )}
-            </div>
           </div>
         </div>
       </main>
