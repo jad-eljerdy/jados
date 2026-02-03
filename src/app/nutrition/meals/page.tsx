@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getAuthToken } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Star, Trash2, Plus, ChefHat, Flame, Beef, Loader2 } from "lucide-react";
+import { Star, Trash2, Plus, ChefHat, Zap, Dumbbell, Loader2 } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 export default function MealsPage() {
@@ -99,12 +99,12 @@ export default function MealsPage() {
                   {/* Macros */}
                   <div className="flex items-center gap-4 mb-4">
                     <div className="flex items-center gap-1.5">
-                      <Flame className="h-3.5 w-3.5 text-orange-400/70" />
+                      <Zap className="h-3.5 w-3.5 text-amber-500/70" />
                       <span className="text-sm font-medium">{Math.round(meal.totalCalories)}</span>
                       <span className="text-xs text-muted-foreground">kcal</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Beef className="h-3.5 w-3.5 text-blue-400/70" />
+                      <Dumbbell className="h-3.5 w-3.5 text-violet-400/70" />
                       <span className="text-sm font-medium">{Math.round(meal.totalProtein)}g</span>
                       <span className="text-xs text-muted-foreground">protein</span>
                     </div>

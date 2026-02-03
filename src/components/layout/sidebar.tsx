@@ -46,13 +46,13 @@ export function Sidebar() {
     <div className="flex h-full w-60 flex-col border-r border-border/50 bg-card/50">
       {/* Logo */}
       <div className="flex h-14 items-center px-4 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <span className="text-primary text-sm font-bold">J</span>
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
+            <span className="text-white text-sm font-bold">J</span>
           </div>
           <span className="text-base font-semibold tracking-tight">JadOS</span>
-          <span className="text-[10px] text-muted-foreground font-medium px-1.5 py-0.5 rounded bg-muted">
-            v0.1
+          <span className="text-[10px] text-muted-foreground/70 font-medium px-1.5 py-0.5 rounded-md bg-secondary">
+            beta
           </span>
         </div>
       </div>
@@ -158,7 +158,7 @@ export function Sidebar() {
       {/* User section */}
       <div className="border-t border-border/50 p-3">
         <div className="flex items-center gap-2.5 px-2">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-medium text-sm">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/80 to-violet-500/80 flex items-center justify-center text-white font-medium text-sm">
             {user?.name?.charAt(0) ?? "?"}
           </div>
           <div className="flex-1 min-w-0">

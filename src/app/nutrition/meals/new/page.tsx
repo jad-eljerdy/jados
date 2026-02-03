@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Plus, X, Send, Loader2, Sparkles, Trash2, Flame, Beef, Droplets, Wheat } from "lucide-react";
+import { ArrowLeft, Plus, X, Send, Loader2, Sparkles, Trash2, Zap, Dumbbell, Droplet, Leaf } from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 const SLOTS = [
@@ -221,43 +221,43 @@ export default function NewMealPage() {
 
           {/* Macro Progress */}
           {components.some((c) => c.ingredientId) && (
-            <div className="mb-8 p-4 rounded-xl bg-card/50 border border-border/30">
-              <div className="grid grid-cols-4 gap-4">
+            <div className="mb-8 p-5 rounded-xl bg-card border border-border/50">
+              <div className="grid grid-cols-4 gap-6">
                 <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Flame className="h-3.5 w-3.5 text-orange-400" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Zap className="h-3.5 w-3.5 text-amber-500" />
                     <span className="text-xs text-muted-foreground">Calories</span>
                   </div>
-                  <div className="text-2xl font-semibold">{Math.round(totals.calories)}</div>
-                  <div className="h-1 mt-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-orange-400 transition-all" style={{ width: `${calPercent}%` }} />
+                  <div className="text-2xl font-semibold tracking-tight">{Math.round(totals.calories)}</div>
+                  <div className="h-1 mt-2 rounded-full bg-secondary overflow-hidden">
+                    <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${calPercent}%` }} />
                   </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">/ {targets.cal}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">of {targets.cal}</div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Beef className="h-3.5 w-3.5 text-blue-400" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Dumbbell className="h-3.5 w-3.5 text-violet-400" />
                     <span className="text-xs text-muted-foreground">Protein</span>
                   </div>
-                  <div className="text-2xl font-semibold">{Math.round(totals.protein)}<span className="text-sm text-muted-foreground">g</span></div>
-                  <div className="h-1 mt-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-blue-400 transition-all" style={{ width: `${proteinPercent}%` }} />
+                  <div className="text-2xl font-semibold tracking-tight">{Math.round(totals.protein)}<span className="text-sm font-normal text-muted-foreground">g</span></div>
+                  <div className="h-1 mt-2 rounded-full bg-secondary overflow-hidden">
+                    <div className="h-full bg-violet-400 transition-all duration-300" style={{ width: `${proteinPercent}%` }} />
                   </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">/ {targets.p}g</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">of {targets.p}g</div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Droplets className="h-3.5 w-3.5 text-yellow-400" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Droplet className="h-3.5 w-3.5 text-sky-400" />
                     <span className="text-xs text-muted-foreground">Fat</span>
                   </div>
-                  <div className="text-2xl font-semibold">{Math.round(totals.fat)}<span className="text-sm text-muted-foreground">g</span></div>
+                  <div className="text-2xl font-semibold tracking-tight">{Math.round(totals.fat)}<span className="text-sm font-normal text-muted-foreground">g</span></div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Wheat className="h-3.5 w-3.5 text-emerald-400" />
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Leaf className="h-3.5 w-3.5 text-teal-400" />
                     <span className="text-xs text-muted-foreground">Carbs</span>
                   </div>
-                  <div className="text-2xl font-semibold">{Math.round(totals.carbs)}<span className="text-sm text-muted-foreground">g</span></div>
+                  <div className="text-2xl font-semibold tracking-tight">{Math.round(totals.carbs)}<span className="text-sm font-normal text-muted-foreground">g</span></div>
                 </div>
               </div>
             </div>
@@ -358,9 +358,9 @@ export default function NewMealPage() {
       <aside className="w-80 border-l border-border/50 flex flex-col bg-card/30">
         {/* Header */}
         <div className="flex items-center justify-between h-14 px-4 border-b border-border/50">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="text-sm font-medium">Assistant</span>
           </div>

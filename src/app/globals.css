@@ -2,50 +2,55 @@
 
 @layer base {
   :root {
-    /* Light mode - clean whites with subtle warmth */
+    /* Light mode */
     --background: 0 0% 99%;
-    --foreground: 240 10% 10%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
-    --primary: 142 70% 45%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 6% 20%;
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
-    --accent: 240 5% 96%;
-    --accent-foreground: 240 6% 20%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 9% 46%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 71% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 142 70% 45%;
-    --radius: 0.75rem;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 84% 67%;
+    --radius: 0.625rem;
   }
 
   .dark {
-    /* Modern dark - warm charcoal, not pure black */
-    --background: 240 6% 7%;
-    --foreground: 0 0% 95%;
-    --card: 240 5% 10%;
-    --card-foreground: 0 0% 95%;
-    --popover: 240 5% 10%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 142 70% 50%;
-    --primary-foreground: 240 10% 4%;
-    --secondary: 240 4% 14%;
-    --secondary-foreground: 0 0% 90%;
-    --muted: 240 4% 14%;
-    --muted-foreground: 240 5% 55%;
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 95%;
+    /* Modern dark with indigo/violet accent */
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 47% 7%;
+    --card-foreground: 213 31% 91%;
+    --popover: 224 47% 7%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 223 47% 11%;
+    --secondary-foreground: 216 12% 84%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 218 11% 55%;
+    --accent: 223 47% 13%;
+    --accent-foreground: 213 31% 91%;
     --destructive: 0 63% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 142 70% 50%;
+    --border: 223 35% 14%;
+    --input: 223 35% 14%;
+    --ring: 239 84% 67%;
+    
+    /* Semantic colors */
+    --success: 142 76% 55%;
+    --warning: 38 92% 50%;
+    --info: 199 89% 48%;
   }
 }
 
@@ -59,23 +64,20 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
   }
 
-  /* Better focus styles */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-ring/50 ring-offset-2 ring-offset-background;
   }
 
-  /* Selection color */
   ::selection {
     @apply bg-primary/20 text-foreground;
   }
 }
 
-/* Custom scrollbar - subtle */
+/* Scrollbar */
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
@@ -100,33 +102,17 @@
     background: hsl(var(--muted-foreground) / 0.3);
   }
 
-  /* Subtle gradient backgrounds */
-  .bg-gradient-subtle {
-    background: linear-gradient(
-      180deg,
-      hsl(var(--background)) 0%,
-      hsl(var(--card)) 100%
-    );
-  }
-
-  /* Glass effect */
-  .glass {
-    background: hsl(var(--card) / 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  /* Glow effect for primary elements */
-  .glow-primary {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
-  }
-
-  /* Text gradient */
+  /* Gradient text */
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(142 70% 65%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(262 83% 70%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Glow */
+  .glow {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.15), 0 0 40px hsl(var(--primary) / 0.1);
   }
 }
 
@@ -137,27 +123,19 @@
   }
 
   .animate-fade-in {
-    animation: fade-in 0.3s ease-out;
+    animation: fade-in 0.3s ease-out forwards;
+    opacity: 0;
   }
 
   .animate-slide-up {
-    animation: slide-up 0.3s ease-out;
-  }
-
-  .animate-scale-in {
-    animation: scale-in 0.2s ease-out;
+    animation: slide-up 0.3s ease-out forwards;
+    opacity: 0;
   }
 }
 
 @keyframes animate-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fade-in {
@@ -166,25 +144,8 @@
 }
 
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Theme variables for Tailwind v4 */
@@ -211,6 +172,6 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
-  --font-sans: "Inter", var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: "Inter", var(--font-inter), system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", var(--font-mono), ui-monospace, monospace;
 }
