@@ -39,9 +39,12 @@ export default function IngredientsPage() {
   const importFromUSDA = useMutation(api.ingredients.importFromUSDA);
   const removeIngredient = useMutation(api.ingredients.remove);
   const searchUSDA = useAction(api.usda.searchFoods);
+  const seedKetoStaples = useMutation(api.seedIngredients.seedKetoStaples);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUSDAModal, setShowUSDAModal] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [usdaQuery, setUsdaQuery] = useState("");
   const [usdaResults, setUsdaResults] = useState<USDAFood[]>([]);
   const [usdaLoading, setUsdaLoading] = useState(false);
@@ -67,6 +70,20 @@ export default function IngredientsPage() {
       router.push("/login");
     }
   }, [isAuthenticated, authLoading, router]);
+
+  const handleSeedStaples = async () => {
+    if (!token) return;
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const result = await seedKetoStaples({ token });
+      setSeedResult({ imported: result.imported, skipped: result.skipped });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   const handleUSDASearch = async () => {
     if (!usdaQuery.trim()) return;
@@ -180,12 +197,28 @@ export default function IngredientsPage() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                onClick={handleSeedStaples} 
+                loading={seeding}
+                disabled={seeding}
+              >
+                🥩 Seed Keto Staples
+              </Button>
               <Button variant="secondary" onClick={() => setShowUSDAModal(true)}>
                 🔍 Search USDA
               </Button>
               <Button onClick={() => setShowAddModal(true)}>+ Add Manual</Button>
             </div>
           </div>
+
+          {/* Seed Result */}
+          {seedResult && (
+            <div className="mb-4 bg-green-900/20 border border-green-700 rounded-lg p-3 text-green-400 text-sm">
+              ✓ Imported {seedResult.imported} keto staples
+              {seedResult.skipped > 0 && ` (${seedResult.skipped} already existed)`}
+            </div>
+          )}
 
           {/* Ingredients List */}
           <div className="bg-zinc-900 rounded-xl overflow-hidden">

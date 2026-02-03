@@ -15,6 +15,7 @@ import type * as mealPlans from "../mealPlans.js";
 import type * as meals from "../meals.js";
 import type * as nutritionConfig from "../nutritionConfig.js";
 import type * as seed from "../seed.js";
+import type * as seedIngredients from "../seedIngredients.js";
 import type * as shoppingList from "../shoppingList.js";
 import type * as usda from "../usda.js";
 import type * as users from "../users.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   meals: typeof meals;
   nutritionConfig: typeof nutritionConfig;
   seed: typeof seed;
+  seedIngredients: typeof seedIngredients;
   shoppingList: typeof shoppingList;
   usda: typeof usda;
   users: typeof users;
