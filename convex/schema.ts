@@ -224,8 +224,10 @@ export default defineSchema({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     context: v.optional(v.any()), // Snapshot of context at message time
+    status: v.optional(v.union(v.literal("pending"), v.literal("responded"))),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_session", ["sessionId"]),
+    .index("by_session", ["sessionId"])
+    .index("by_status", ["status"]),
 });

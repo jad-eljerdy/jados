@@ -10,6 +10,7 @@ export const sendMessage = mutation({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     context: v.optional(v.any()),
+    status: v.optional(v.union(v.literal("pending"), v.literal("responded"))),
   },
   handler: async (ctx, args) => {
     const session = await ctx.db
@@ -26,6 +27,7 @@ export const sendMessage = mutation({
       role: args.role,
       content: args.content,
       context: args.context,
+      status: args.status ?? (args.role === "user" ? "pending" : "responded"),
       createdAt: Date.now(),
     });
 
@@ -80,8 +82,8 @@ export const clearSession = mutation({
   },
 });
 
-// Action to call Claude API
-export const chat = action({
+// Send a message and store it as pending for Clawdbot to respond
+export const chat = mutation({
   args: {
     token: v.string(),
     sessionId: v.string(),
@@ -121,142 +123,118 @@ export const chat = action({
     }),
   },
   handler: async (ctx, args) => {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      // Store user message
-      await ctx.runMutation(api.assistant.sendMessage, {
-        token: args.token,
-        sessionId: args.sessionId,
-        role: "user",
-        content: args.message,
-        context: args.context,
-      });
-      
-      // Return fallback message
-      await ctx.runMutation(api.assistant.sendMessage, {
-        token: args.token,
-        sessionId: args.sessionId,
-        role: "assistant",
-        content: "I'm not fully connected yet! Add ANTHROPIC_API_KEY to your Convex environment variables to enable me. In the meantime, here are some tips:\n\n• Aim for 120-150g protein anchor (chicken, beef, fish)\n• Add 30-50g fat source if needed\n• Include 100-200g low-carb vegetables\n• Keep net carbs under 25g total",
-      });
-      
-      return { success: true, fallback: true };
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .first();
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error("Invalid session");
     }
 
-    // Store user message
-    await ctx.runMutation(api.assistant.sendMessage, {
-      token: args.token,
+    // Store user message as pending
+    const messageId = await ctx.db.insert("assistantMessages", {
+      userId: session.userId,
       sessionId: args.sessionId,
       role: "user",
       content: args.message,
       context: args.context,
+      status: "pending",
+      createdAt: Date.now(),
     });
 
-    // Get conversation history
-    const history = await ctx.runQuery(api.assistant.getMessages, {
-      token: args.token,
-      sessionId: args.sessionId,
-    });
+    return { messageId, status: "pending" };
+  },
+});
 
-    // Build system prompt with context
-    const systemPrompt = buildSystemPrompt(args.context);
-
-    // Build messages for Claude
-    const messages = history.slice(-10).map((msg) => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-    }));
-
-    // Call Claude API
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("Claude API error:", error);
-      throw new Error("Failed to get response from assistant");
+// Get pending messages for Clawdbot to respond to
+export const getPendingMessages = query({
+  args: {
+    secret: v.optional(v.string()), // Simple auth for Clawdbot (optional for now)
+  },
+  handler: async (ctx, args) => {
+    // Verify secret matches if configured
+    const expectedSecret = process.env.CLAWDBOT_SECRET;
+    if (expectedSecret && args.secret !== expectedSecret) {
+      return [];
     }
 
-    const data = await response.json();
-    const assistantMessage = data.content[0].text;
+    return await ctx.db
+      .query("assistantMessages")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .order("asc")
+      .take(10);
+  },
+});
+
+// Clawdbot responds to a pending message
+export const respondToMessage = mutation({
+  args: {
+    secret: v.optional(v.string()),
+    messageId: v.id("assistantMessages"),
+    response: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const expectedSecret = process.env.CLAWDBOT_SECRET;
+    if (expectedSecret && args.secret !== expectedSecret) {
+      throw new Error("Invalid secret");
+    }
+
+    // Get the original message
+    const original = await ctx.db.get(args.messageId);
+    if (!original) throw new Error("Message not found");
+
+    // Mark original as responded
+    await ctx.db.patch(args.messageId, { status: "responded" });
 
     // Store assistant response
-    await ctx.runMutation(api.assistant.sendMessage, {
-      token: args.token,
-      sessionId: args.sessionId,
+    await ctx.db.insert("assistantMessages", {
+      userId: original.userId,
+      sessionId: original.sessionId,
       role: "assistant",
-      content: assistantMessage,
+      content: args.response,
+      status: "responded",
+      createdAt: Date.now(),
     });
 
     return { success: true };
   },
 });
 
-function buildSystemPrompt(context: any): string {
-  let prompt = `You are Son of Anton, JJ's personal nutrition assistant embedded in JadOS. You're helpful, concise, and know JJ's dietary requirements:
-
-**JJ's Protocol:**
+// Helper to format context for display
+export function formatContextForAssistant(context: any): string {
+  let prompt = `**JJ's Protocol:**
 - Renal-Safe Keto OMAD (One Meal A Day)
 - Caloric ceiling: ${context.targets?.caloricCeiling ?? 1650} kcal
-- Protein target: ${context.targets?.proteinTarget ?? 120}g (important for muscle, but watch kidneys)
+- Protein target: ${context.targets?.proteinTarget ?? 120}g
 - Fat target: ${context.targets?.fatTarget ?? 120}g
 - Net carbs limit: ${context.targets?.netCarbLimit ?? 25}g
-- Hypertension management: watch sodium, aim for potassium-rich foods
-
-**Your role:**
-- Help build balanced keto meals
-- Suggest ingredients and portions
-- Flag if macros are off target
-- Be proactive with suggestions
-- Keep responses SHORT (2-4 sentences max unless asked for detail)
 
 **Current view:** ${context.view}
 `;
 
   if (context.view === "meal_creation") {
-    prompt += `\n**Current meal being built:**
-- Name: ${context.mealName || "(unnamed)"}
-- Components: ${context.components?.length ?? 0} ingredients
-`;
+    prompt += `\n**Meal being built:** ${context.mealName || "(unnamed)"}`;
 
     if (context.components && context.components.length > 0) {
-      prompt += `\nIngredients added:\n`;
+      prompt += `\n**Ingredients:**\n`;
       context.components.forEach((c: any) => {
         prompt += `- ${c.ingredientName}: ${c.weightGrams}g (${Math.round(c.calories)} cal, ${Math.round(c.protein)}g P)\n`;
       });
     }
 
     if (context.totals) {
-      prompt += `\n**Current totals:**
-- Calories: ${Math.round(context.totals.calories)} / ${context.targets?.caloricCeiling ?? 1650}
-- Protein: ${Math.round(context.totals.protein)}g / ${context.targets?.proteinTarget ?? 120}g
-- Fat: ${Math.round(context.totals.fat)}g / ${context.targets?.fatTarget ?? 120}g  
-- Carbs: ${Math.round(context.totals.carbs)}g / ${context.targets?.netCarbLimit ?? 25}g
-`;
+      prompt += `\n**Current totals:** ${Math.round(context.totals.calories)} cal, ${Math.round(context.totals.protein)}g P, ${Math.round(context.totals.fat)}g F, ${Math.round(context.totals.carbs)}g C`;
     }
 
     if (context.availableIngredients && context.availableIngredients.length > 0) {
-      prompt += `\n**Available ingredients (${context.availableIngredients.length} total):**\n`;
-      // Group by category and show top items
-      const byCategory: Record<string, any[]> = {};
+      const byCategory: Record<string, string[]> = {};
       context.availableIngredients.forEach((ing: any) => {
         if (!byCategory[ing.category]) byCategory[ing.category] = [];
-        byCategory[ing.category].push(ing);
+        byCategory[ing.category].push(ing.name);
       });
+      prompt += `\n\n**Available ingredients:**\n`;
       Object.entries(byCategory).forEach(([cat, items]) => {
-        prompt += `${cat}: ${items.slice(0, 5).map((i: any) => i.name).join(", ")}${items.length > 5 ? ` (+${items.length - 5} more)` : ""}\n`;
+        prompt += `${cat}: ${items.slice(0, 5).join(", ")}${items.length > 5 ? ` (+${items.length - 5} more)` : ""}\n`;
       });
     }
   }
