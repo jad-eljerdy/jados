@@ -92,8 +92,8 @@ export default function PlannerPage() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">
-        <div className="max-w-5xl">
+      <main className="flex-1 overflow-auto pt-14 md:pt-0 p-4 md:p-8">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Meal Planner</h1>

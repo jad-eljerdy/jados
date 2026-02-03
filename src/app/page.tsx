@@ -73,7 +73,7 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-zinc-950">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">
+      <main className="flex-1 overflow-auto pt-14 md:pt-0 p-4 md:p-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white">

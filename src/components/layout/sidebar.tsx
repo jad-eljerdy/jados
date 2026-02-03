@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -19,6 +19,8 @@ import {
   Calendar,
   ChefHat,
   Apple,
+  Menu,
+  X,
 } from "lucide-react";
 
 const mainNavigation = [
@@ -39,13 +41,31 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [nutritionExpanded, setNutritionExpanded] = useState(pathname.startsWith("/nutrition"));
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isNutritionActive = pathname.startsWith("/nutrition");
 
-  return (
-    <div className="flex h-full w-60 flex-col border-r border-border/50 bg-card/50">
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className="flex h-14 items-center px-4 border-b border-border/50">
+      <div className="flex h-14 items-center justify-between px-4 border-b border-border/50">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
             <span className="text-white text-sm font-bold">J</span>
@@ -55,6 +75,13 @@ export function Sidebar() {
             beta
           </span>
         </div>
+        {/* Mobile close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="md:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -178,6 +205,49 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile header bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center h-14 px-4 border-b border-border/50 bg-background">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 -ml-2 rounded-md text-muted-foreground hover:text-foreground"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="flex items-center gap-2 ml-2">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">J</span>
+          </div>
+          <span className="text-sm font-semibold">JadOS</span>
+        </div>
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/50"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-card/95 backdrop-blur-sm transform transition-transform duration-200 ease-out flex flex-col",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {sidebarContent}
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex h-full w-60 flex-col border-r border-border/50 bg-card/50">
+        {sidebarContent}
+      </div>
+    </>
   );
 }

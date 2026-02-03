@@ -110,7 +110,7 @@ export default function NutritionSettingsPage() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">
+      <main className="flex-1 overflow-auto pt-14 md:pt-0 p-4 md:p-8">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-bold text-foreground mb-2">Nutrition Settings</h1>
           <p className="text-muted-foreground mb-8">Configure your dietary targets and medical constraints</p>

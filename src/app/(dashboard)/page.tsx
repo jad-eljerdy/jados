@@ -103,8 +103,8 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8">
+      <main className="flex-1 overflow-auto pt-14 md:pt-0">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-semibold mb-1">
