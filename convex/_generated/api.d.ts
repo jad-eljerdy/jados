@@ -21,6 +21,7 @@ import type * as seedIngredients from "../seedIngredients.js";
 import type * as shoppingList from "../shoppingList.js";
 import type * as usda from "../usda.js";
 import type * as users from "../users.js";
+import type * as weightLogs from "../weightLogs.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   shoppingList: typeof shoppingList;
   usda: typeof usda;
   users: typeof users;
+  weightLogs: typeof weightLogs;
 }>;
 
 /**

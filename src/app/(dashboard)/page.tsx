@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { getAuthToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
@@ -23,6 +24,9 @@ import {
   Loader2,
   ArrowRight,
   Flame,
+  Scale,
+  Trophy,
+  Target,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -39,9 +43,17 @@ export default function DashboardPage() {
   const todayPlan = useQuery(api.mealPlans.getDay, token ? { token, date: today } : "skip");
   const meals = useQuery(api.meals.list, token ? { token } : "skip");
   const weekPlans = useQuery(api.mealPlans.getWeek, token ? { token, weekStart: getWeekStart(new Date()) } : "skip");
+  const latestWeight = useQuery(api.weightLogs.getLatest, token ? { token } : "skip");
+  const recentWeights = useQuery(api.weightLogs.getRecent, token ? { token, limit: 7 } : "skip");
 
   // Mutations
   const markConsumed = useMutation(api.mealPlans.markConsumed);
+  const logWeight = useMutation(api.weightLogs.log);
+
+  // Weight log state
+  const [showWeightInput, setShowWeightInput] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
+  const [loggingWeight, setLoggingWeight] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -49,13 +61,25 @@ export default function DashboardPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  // Calculate streak
+  const streak = useMemo(() => {
+    if (!weekPlans) return 0;
+    
+    // Count consecutive consumed days ending today or yesterday
+    const sortedPlans = [...weekPlans].sort((a, b) => b.date.localeCompare(a.date));
+    let count = 0;
+    
+    for (const day of sortedPlans) {
+      if (day.plan?.status === "consumed") {
+        count++;
+      } else if (day.date <= today) {
+        // Break on a non-consumed day that's in the past
+        break;
+      }
+    }
+    
+    return count;
+  }, [weekPlans, today]);
 
   // Calculate week stats
   const weekStats = weekPlans?.reduce(
@@ -98,7 +122,38 @@ export default function DashboardPage() {
     await markConsumed({ token, date: today });
   };
 
+  const handleLogWeight = async () => {
+    if (!token || !weightInput) return;
+    setLoggingWeight(true);
+    try {
+      await logWeight({ token, date: today, weight: parseFloat(weightInput) });
+      setShowWeightInput(false);
+      setWeightInput("");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoggingWeight(false);
+    }
+  };
+
   const isConsumed = todayPlan?.status === "consumed";
+
+  // Weight trend
+  const weightTrend = useMemo(() => {
+    if (!recentWeights || recentWeights.length < 2) return null;
+    const latest = recentWeights[recentWeights.length - 1].weight;
+    const first = recentWeights[0].weight;
+    const diff = latest - first;
+    return { diff, direction: diff < 0 ? "down" : diff > 0 ? "up" : "same" };
+  }, [recentWeights]);
+
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -116,8 +171,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Today's Meal */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Today</h2>
               {todayPlan && !isConsumed && (
                 <Button size="sm" onClick={handleMarkConsumed}>
@@ -129,7 +184,7 @@ export default function DashboardPage() {
 
             {todayPlan ? (
               <Card className={cn("transition-all", isConsumed && "opacity-60")}>
-                <CardContent className="p-6">
+                <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -201,50 +256,109 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Week Overview */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {/* Streak */}
             <Card>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-muted-foreground">This Week</span>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Streak</span>
+                  <Trophy className={cn("h-4 w-4", streak > 0 ? "text-amber-500" : "text-muted-foreground/30")} />
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-semibold">{adherencePercent}%</span>
-                  <span className="text-sm text-muted-foreground">adherence</span>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {weekStats.consumed} of {weekStats.planned} meals consumed
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-semibold">{streak}</span>
+                  <span className="text-xs text-muted-foreground">days</span>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Adherence */}
             <Card>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-muted-foreground">Avg Daily</span>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">This Week</span>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-semibold">{adherencePercent}%</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {weekStats.consumed}/{weekStats.planned} meals
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Avg Calories */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Avg Daily</span>
                   <Flame className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-semibold">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-semibold">
                     {weekStats.consumed > 0 
                       ? Math.round(weekStats.totalCalories / weekStats.consumed) 
                       : "—"}
                   </span>
-                  <span className="text-sm text-muted-foreground">kcal</span>
+                  <span className="text-xs text-muted-foreground">kcal</span>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {weekStats.consumed > 0 
-                    ? `${Math.round(weekStats.totalProtein / weekStats.consumed)}g protein avg`
-                    : "No data yet"}
+              </CardContent>
+            </Card>
+
+            {/* Weight */}
+            <Card className="cursor-pointer hover:bg-card/80 transition-colors" onClick={() => !showWeightInput && setShowWeightInput(true)}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Weight</span>
+                  <Scale className={cn("h-4 w-4", weightTrend?.direction === "down" ? "text-emerald-500" : "text-muted-foreground")} />
                 </div>
+                {showWeightInput ? (
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={weightInput}
+                      onChange={(e) => setWeightInput(e.target.value)}
+                      placeholder="kg"
+                      className="h-8 text-sm"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleLogWeight();
+                        if (e.key === "Escape") setShowWeightInput(false);
+                      }}
+                    />
+                    <Button size="sm" className="h-8 px-2" onClick={handleLogWeight} loading={loggingWeight}>
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-semibold">
+                        {latestWeight?.weight?.toFixed(1) ?? "—"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">kg</span>
+                    </div>
+                    {weightTrend && (
+                      <div className={cn(
+                        "text-[10px]",
+                        weightTrend.direction === "down" ? "text-emerald-500" : 
+                        weightTrend.direction === "up" ? "text-amber-500" : "text-muted-foreground"
+                      )}>
+                        {weightTrend.direction === "down" ? "↓" : weightTrend.direction === "up" ? "↑" : "→"} 
+                        {Math.abs(weightTrend.diff).toFixed(1)}kg this week
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Quick Actions */}
           <div>
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Quick Actions</h2>
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">Quick Actions</h2>
             <div className="grid grid-cols-3 gap-3">
               <QuickAction
                 label="Plan meals"

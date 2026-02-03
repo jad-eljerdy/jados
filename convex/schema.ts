@@ -217,6 +217,17 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_week", ["userId", "weekStart"]),
 
+  // ============ NUTRITION: WEIGHT LOGS ============
+  weightLogs: defineTable({
+    userId: v.id("users"),
+    date: v.string(), // "2026-02-03"
+    weight: v.number(), // kg
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "date"]),
+
   // ============ GLOBAL SETTINGS ============
   globalSettings: defineTable({
     userId: v.id("users"),
